@@ -7,7 +7,7 @@ matrix = [[10, -3],
 
 
 def generate_choice_from_box(box):
-    """Генерация выбора на основе содержимого коробки"""
+    """Генерация выбора на основе содежимого коробки"""
     total_balls = sum(box.values())
     threshold = box['red'] / total_balls
     return 0 if random.random() < threshold else 1
