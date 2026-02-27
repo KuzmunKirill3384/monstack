@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
-	"strconv"
 	"syscall"
 
 	"go.uber.org/zap"
