@@ -41,6 +41,6 @@ backend/       NestJS + Fastify + Prisma
 web/           Next.js дашборд
 tools/term/    Node TUI (blessed)
 tools/term-c/  C TUI (ncurses)
-scripts/       install-all.sh, install.sh, check-stack.sh
+scripts/       install-all.sh, install.sh, check-stack.sh, check-deps.sh
 docs/          документация
 ```

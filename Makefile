@@ -6,7 +6,7 @@
 # make term-c  — собрать и запустить C TUI (если есть ncurses и curl)
 
 .PHONY: install install-all install-backend install-web install-term install-term-c link \
-        up down logs term term-c localterm webterm check term-check test clean help diagrams
+        up down logs term term-c localterm webterm check check-deps term-check test clean help diagrams
 
 SHELL := /bin/bash
 
@@ -21,6 +21,7 @@ help:
 	@echo "  make up          — запустить всё в Docker (postgres, backend, web, agent)"
 	@echo "  make down        — остановить контейнеры"
 	@echo "  make check       — проверить готовность стека (backend, web)"
+	@echo "  make check-deps  — проверить установленные пакеты (node, docker, npm, etc)"
 	@echo "  make logs        — логи docker compose"
 	@echo "  make localterm   — терминальный TUI с баннером (без npm link)"
 	@echo "  make webterm     — поднять Docker и открыть веб в браузере"
@@ -93,6 +94,9 @@ term-check:
 
 check:
 	@bash scripts/check-stack.sh
+
+check-deps:
+	@./scripts/check-deps.sh
 
 test:
 	@echo ">> backend: unit + e2e..."
