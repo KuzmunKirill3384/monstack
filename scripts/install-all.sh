@@ -50,6 +50,8 @@ pkg_installed_deb() {
 install_system_ubuntu() {
   local pkgs=()
   command -v docker >/dev/null 2>&1 || pkgs+=(docker.io)
+  # docker-compose (v1) — в universe; docker-compose-plugin — только из Docker repo
+  (docker compose version >/dev/null 2>&1 || command -v docker-compose >/dev/null 2>&1) || pkgs+=(docker-compose)
   command -v make >/dev/null 2>&1 || pkgs+=(build-essential)
   command -v gcc >/dev/null 2>&1 || pkgs+=(build-essential)
   pkg_installed_deb libncurses-dev || pkgs+=(libncurses-dev)
