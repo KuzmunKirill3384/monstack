@@ -6,7 +6,7 @@
 # make term-c  — собрать и запустить C TUI (если есть ncurses и curl)
 
 .PHONY: install install-all install-backend install-web install-term install-term-c link \
-        up down logs term term-c localterm webterm check check-deps term-check test clean help diagrams
+        up up-full down logs term term-c localterm webterm check check-deps term-check test clean help diagrams
 
 SHELL := /bin/bash
 
@@ -18,7 +18,8 @@ help:
 	@echo ""
 	@echo "  make install-all — полная установка (Node, Docker, Make, ncurses, npm) — Ubuntu/macOS"
 	@echo "  make install     — установить зависимости + npm link (localterm, webterm)"
-	@echo "  make up          — запустить всё в Docker (postgres, backend, web, agent)"
+	@echo "  make up          — запустить стек (postgres, backend, web)"
+	@echo "  make up-full     — + agent (сбор метрик с контейнера)"
 	@echo "  make down        — остановить контейнеры"
 	@echo "  make check       — проверить готовность стека (backend, web)"
 	@echo "  make check-deps  — проверить установленные пакеты (node, docker, npm, etc)"
@@ -72,6 +73,11 @@ up:
 	@command -v docker-compose >/dev/null 2>&1 || (echo ""; echo "Нужен docker-compose. Установите:"; echo "  sudo apt install docker-compose"; echo "или скачайте: https://github.com/docker/compose/releases"; echo ""; exit 1)
 	@docker-compose up -d --build
 	@echo "Backend: http://localhost:3000  Web: http://localhost:3001"
+	@echo "Agent опционален: docker-compose --profile agent up -d"
+
+up-full:
+	@docker-compose --profile agent up -d --build
+	@echo "Backend: http://localhost:3000  Web: http://localhost:3001  Agent: включён"
 
 down:
 	@docker-compose down
