@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { AlertRule, Host } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { HostsService } from '../hosts/hosts.service';
+
+type AlertRuleWithHost = AlertRule & { host: Host | null };
 
 const ONLINE_THRESHOLD_MS = 60_000;
 
@@ -14,7 +17,7 @@ export class AlertsCronService {
 
   @Cron('*/2 * * * *')
   async checkAlerts() {
-    const rules = await this.prisma.alertRule.findMany({
+    const rules: AlertRuleWithHost[] = await this.prisma.alertRule.findMany({
       where: { enabled: true },
       include: { host: true },
     });
@@ -28,7 +31,7 @@ export class AlertsCronService {
     }
   }
 
-  private async checkHostDown(rule: { id: string; hostId: string | null }) {
+  private async checkHostDown(rule: AlertRuleWithHost) {
     if (!rule.hostId) return;
     const host = await this.hosts.findOne(rule.hostId);
     if (!host) return;
@@ -62,13 +65,7 @@ export class AlertsCronService {
     }
   }
 
-  private async checkThreshold(rule: {
-    id: string;
-    hostId: string | null;
-    metric: string;
-    op: string;
-    threshold: number | null;
-  }) {
+  private async checkThreshold(rule: AlertRuleWithHost) {
     if (rule.threshold == null) return;
     const hostIds = rule.hostId
       ? [rule.hostId]

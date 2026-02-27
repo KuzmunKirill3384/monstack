@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { AlertRule } from '@prisma/client';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
@@ -44,14 +45,14 @@ export class AlertRulesController {
   constructor(private prisma: PrismaService) {}
 
   @Get()
-  list(@Query('host') hostId?: string) {
+  list(@Query('host') hostId?: string): Promise<AlertRule[]> {
     return this.prisma.alertRule.findMany({
       where: hostId ? { OR: [{ hostId }, { hostId: null }] } : undefined,
     });
   }
 
   @Post()
-  create(@Body() dto: CreateAlertRuleDto) {
+  create(@Body() dto: CreateAlertRuleDto): Promise<AlertRule> {
     return this.prisma.alertRule.create({
       data: {
         hostId: dto.hostId ?? undefined,
@@ -65,7 +66,7 @@ export class AlertRulesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateAlertRuleDto) {
+  update(@Param('id') id: string, @Body() dto: UpdateAlertRuleDto): Promise<AlertRule> {
     return this.prisma.alertRule.update({
       where: { id },
       data: {
@@ -76,7 +77,7 @@ export class AlertRulesController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string): Promise<AlertRule> {
     return this.prisma.alertRule.delete({ where: { id } });
   }
 }

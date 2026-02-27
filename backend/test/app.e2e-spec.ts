@@ -1,25 +1,46 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
 
 describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestFastifyApplication;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PrismaService)
+      .useValue({
+        $queryRaw: jest.fn().mockResolvedValue([{ 1: 1 }]),
+        $connect: jest.fn(),
+        $disconnect: jest.fn(),
+      })
+      .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
     await app.init();
+    await app.getHttpAdapter().getInstance().ready();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  afterEach(async () => {
+    await app?.close();
+  });
+
+  it('GET /health returns ok', async () => {
+    const res = await app.inject({ method: 'GET', url: '/health' });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.payload)).toEqual({ status: 'ok' });
+  });
+
+  it('GET /ready returns ok when DB is up', async () => {
+    const res = await app.inject({ method: 'GET', url: '/ready' });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.payload)).toEqual({ status: 'ok' });
   });
 });

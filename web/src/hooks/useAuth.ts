@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import { getToken } from '@/lib/auth';
 
 export function useAuth() {
-  const [token, setTokenState] = useState<string | null>(null);
+  const [token] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? getToken() : null
+  );
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setTokenState(getToken());
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, []);
 
   return { token, isAuthenticated: !!token, mounted };

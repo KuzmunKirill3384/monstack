@@ -8,7 +8,8 @@
     "start": "node tui.js",
     "tui": "node tui.js",
     "simple": "node index.js",
-    "watch": "node index.js --watch"
+    "watch": "node index.js --watch",
+    "test": "node utils.test.js"
   },
   "dependencies": {
     "blessed": "^0.1.81",
