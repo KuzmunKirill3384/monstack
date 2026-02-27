@@ -171,9 +171,11 @@ func TopNByCPUAndRSS(all []ProcRaw, prev map[int]ProcRaw, intervalSec float64, n
 		}
 		seen[p.Pid] = struct{}{}
 		ioR, ioW := uint64(0), uint64(0)
-		if intervalSec > 0 && prevP, ok := prev[p.Pid]; ok {
-			ioR = uint64(float64(p.Rchar-prevP.Rchar) / intervalSec)
-			ioW = uint64(float64(p.Wchar-prevP.Wchar) / intervalSec)
+		if intervalSec > 0 {
+			if prevP, ok := prev[p.Pid]; ok {
+				ioR = uint64(float64(p.Rchar-prevP.Rchar) / intervalSec)
+				ioW = uint64(float64(p.Wchar-prevP.Wchar) / intervalSec)
+			}
 		}
 		result = append(result, ProcInfo{
 			PID:        p.Pid,
