@@ -14,6 +14,8 @@
 6. [Что сделано](#что-сделано)
 7. [Что предстоит сделать](#что-предстоит-сделать)
 
+Подробная документация: [docs/README.md](docs/README.md). Разработка: [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ---
 
 ## Архитектура и как это работает
@@ -26,7 +28,7 @@
 
 ### Схема 2. Поток данных (кто куда шлёт)
 
-![Поток данных](docs/diagrams/dataflow.png)
+![Поток данных](docs/diagrams/data-flow.png)
 
 ### Схема 3. Docker: контейнеры и порты
 
@@ -69,8 +71,10 @@ make install    # зависимости backend, web, tools/term + npm link
 | **`webterm`** | Поднимает Docker (postgres + backend + web + agent), показывает баннер, через 3 с открывает в браузере http://localhost:3001. |
 | **`make up`** | Запустить весь стек в Docker (postgres, backend, web, agent). |
 | **`make down`** | Остановить контейнеры. |
-| **`make term`** | То же, что `localterm`, из корня репо. |
-| **`make term-c`** | Собрать и запустить быстрый TUI на C (ncurses + libcurl), обновление 500 мс. |
+| **`make term`** | Запустить Node TUI (5 экранов, клавиши 1–5 / F1–F5). |
+| **`make term-check`** | Smoke-тест TUI (проверка выхода при недоступном backend). |
+| **`make term-c`** | Собрать и запустить быстрый TUI на C (1–4 экрана, 500 мс). |
+| **`make check`** | Проверить готовность стека (`/ready`, web). |
 | **`make logs`** | Логи docker compose. |
 | **`make clean`** | Удалить node_modules и сборку term-c. |
 | **`make help`** | Список целей. |
@@ -83,6 +87,44 @@ make install    # зависимости backend, web, tools/term + npm link
 | Backend API | http://localhost:3000 |
 | Swagger (документация API) | http://localhost:3000/api/docs |
 
+### Клавиши и экраны TUI
+
+Node TUI и C TUI используют единую раскладку:
+
+| Клавиша | Действие |
+|---------|----------|
+| **1**, **F1** | Экран Hosts — список хостов с CPU/Mem, Enter = выбрать хост |
+| **2**, **F2** | Экран Processes — таблица процессов |
+| **3**, **F3** | Экран Metrics — CPU, Load, Mem, Disk, sparklines |
+| **4**, **F4** | Экран Alerts — события алертов |
+| **5**, **F5** | Экран Rules (только Node TUI) — правила алертов, Enter = toggle enabled |
+| **Enter** | На Hosts: выбрать хост и перейти к Processes. На Rules: переключить enabled |
+| **s** | Сменить столбец сортировки (Processes) |
+| **S** | Сменить направление сортировки |
+| **f** | Фильтр: на Processes — по PID/имени; на Alerts — по status |
+| **/** | Поиск хостов по имени или ID (только Node TUI, экран Hosts) |
+| **h** | Сменить хост (Processes, при нескольких хостах) |
+| **k**, **F9** | Отправить сигнал процессу (Node TUI: SIGTERM/SIGKILL) |
+| **r** | Обновить данные |
+| **q**, **Esc** | Выход |
+
+В C TUI на экране Hosts: **↑/↓** — выбор строки, **Enter** — выбрать хост.
+
+### Переменные окружения
+
+| Переменная | По умолчанию | Описание |
+|------------|--------------|----------|
+| **API_URL** | `http://localhost:3000` | URL backend API |
+| **TUI_REFRESH_MS** | 5000 | Интервал обновления TUI (мс) |
+| **TUI_ALERTS_REFRESH_MS** | 10000 | Интервал обновления алертов (мс) |
+| **TUI_THEME** | `dark` | Тема: `dark` или `light` (только Node TUI) |
+| **TUI_PROCESS_LIMIT** | 200 | Лимит процессов в запросе |
+| **LOCALTERM_DELAY** | 1000 | Задержка перед запуском TUI (мс), 0 = без задержки |
+
+Файл **`.env.example`** содержит полный список. Скопируйте при необходимости: `cp .env.example .env`.
+
+Подробнее: [docs/TUI.md](docs/TUI.md).
+
 ---
 
 ## Компоненты системы
@@ -92,8 +134,8 @@ make install    # зависимости backend, web, tools/term + npm link
 | **Agent** | Go | Сбор метрик (CPU, память, load, сеть, диск) и топ процессов с хоста. Отправка batch в backend по HTTP (gzip). Работает **только на Linux** (читает `/proc`). В Docker — Linux-контейнер. |
 | **Backend** | NestJS, Fastify, Prisma | Приём `POST /v1/ingest`, идентификация хоста по токену, запись в БД. API: хосты, метрики, процессы, алерты и правила. Миграции и seed при старте (дефолтный хост + пользователь). |
 | **Web** | Next.js 14+, shadcn/ui, TanStack Query, Recharts | Дашборд: список хостов, страница хоста с графиками и вкладкой «Процессы» (таблица с сортировкой и фильтром, автообновление 2 с), раздел «Алерты». Без входа по логину/паролю. |
-| **Term (Node)** | Node.js, blessed | TUI в стиле htop: список процессов, сортировка (s/S), фильтр (f), смена хоста (h), обновление 1 с. Баннер при запуске `localterm`. |
-| **Term (C)** | C, ncurses, libcurl | То же по смыслу, обновление 500 мс. Сборка: `make` в `tools/term-c` (нужны ncurses и libcurl). |
+| **Term (Node)** | Node.js, blessed | TUI: 5 экранов (Hosts, Processes, Metrics, Alerts, Rules), спарклайны, поиск по хостам, проверка backend при старте. |
+| **Term (C)** | C, ncurses, libcurl | TUI: 4 экрана (Hosts, Processes, Metrics, Alerts), обновление 500 мс. Проверка backend при старте. |
 | **PostgreSQL** | Postgres 16 | Хранение пользователей, хостов, метрик, снимков процессов, правил и событий алертов. |
 
 Зависимости контейнеров см. **Схему 3** выше (рисунок Docker).
@@ -159,8 +201,8 @@ make install    # зависимости backend, web, tools/term + npm link
 | **Агент** | Сбор CPU, памяти, load, сети, диска, топ процессов; batch + gzip; отправка на backend с Bearer-токеном; конфиг (YAML); graceful shutdown. |
 | **Backend** | Ingest по токену хоста; регистрация хоста по last_seen_at; API хостов, метрик, процессов; Prisma, миграции, seed (дефолтный хост + пользователь); алерты: модель, cron-проверка, CRUD правил и GET событий. |
 | **Web** | Список хостов (online/offline), страница хоста с графиками (Recharts) и выбором периода; вкладка «Процессы» — таблица с сортировкой, фильтром, автообновлением 2 с; раздел «Алерты»; без логина. |
-| **Терминал** | Node TUI (blessed): таблица процессов, сортировка, фильтр, смена хоста, обновление 1 с; C TUI (ncurses, curl) с обновлением 500 мс; баннеры при запуске localterm и webterm. |
-| **Запуск** | Docker Compose (postgres, backend, web, agent); Makefile (install, up, down, term, term-c, clean); команды localterm и webterm через npm link. |
+| **Терминал** | Node TUI: 5 экранов, API-check при старте, retry/timeout, темы, sparklines, экран правил; C TUI: 4 экрана, проверка backend, цвета в алертах; localterm/webterm — проверка /ready, webterm ждёт backend перед открытием браузера. |
+| **Запуск** | Docker Compose; Makefile (install, up, down, check, term, term-check, term-c, clean); `make check` — проверка стека; localterm/webterm через npm link. |
 | **Документация** | README с архитектурой, таблицами, командами; docs (design, API, data model, roles и др.). |
 
 ---

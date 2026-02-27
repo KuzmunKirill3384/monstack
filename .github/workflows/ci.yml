@@ -17,9 +17,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
       - run: cd backend && npm ci
+      - run: cd backend && npx prisma generate
       - run: cd backend && npm run lint
       - run: cd backend && npm run build
-      - run: cd backend && npm test -- --passWithNoTests
+      - run: cd backend && npm test
+      - run: cd backend && npm run test:e2e
 
   web:
     runs-on: ubuntu-latest
@@ -43,3 +45,22 @@ jobs:
           go-version: '1.22'
       - run: cd agent && go build -o /dev/null ./cmd/agent
       - run: cd agent && go test ./...
+
+  term:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd tools/term && npm ci
+      - run: cd tools/term && npm test
+      - run: make term-check
+
+  term-c:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libncurses-dev libcurl4-openssl-dev
+      - run: cd tools/term-c && make
+      - run: API_URL=http://127.0.0.1:9999 timeout 2 ./tools/term-c/monterm 2>/dev/null; r=$?; test $r -ne 0 && echo "term-c smoke OK" || (echo "term-c should exit when backend unavailable"; exit 1)

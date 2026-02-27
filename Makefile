@@ -6,7 +6,7 @@
 # make term-c  — собрать и запустить C TUI (если есть ncurses и curl)
 
 .PHONY: install install-backend install-web install-term install-term-c link \
-        up down logs term term-c clean help diagrams
+        up down logs term term-c check term-check test clean help diagrams
 
 SHELL := /bin/bash
 
@@ -16,13 +16,18 @@ help:
 	@echo "  make install     — установить зависимости + npm link (localterm, webterm)"
 	@echo "  make up          — запустить всё в Docker (postgres, backend, web, agent)"
 	@echo "  make down        — остановить контейнеры"
+	@echo "  make check       — проверить готовность стека (backend, web)"
 	@echo "  make logs        — логи docker compose"
 	@echo "  localterm        — терминальный TUI (баннер + htop-like), после make install"
-	@echo "  webterm          — поднять Docker и открыть веб-интерфейс в браузере"
-	@echo "  make term        — то же что localterm (из каталога репо)"
-	@echo "  make term-c      — быстрый TUI на C (500 ms)"
+	@echo "  webterm          — поднять Docker и открыть веб в браузере"
+	@echo "  make term        — запустить Node TUI (1-5|F1-F5 экраны, Enter, s, f, r, q)"
+	@echo "  make term-check  — smoke-тест Node TUI (запуск 3 сек с недоступным API)"
+	@echo "  make term-c      — быстрый TUI на C (1-4 экраны, 500 ms)"
+	@echo "  make test        — все тесты (backend, web, term)"
 	@echo "  make clean       — удалить node_modules и сборки"
 	@echo "  make diagrams    — сгенерировать PNG из docs/diagrams/*.puml (Docker)"
+	@echo ""
+	@echo "Клавиши TUI: 1-5|F1-F5 экраны  Enter выбор  s сортировка  f фильтр  r обновить  q выход"
 	@echo ""
 	@echo "После make install: make up, затем localterm или webterm."
 
@@ -69,6 +74,24 @@ logs:
 
 term:
 	@cd tools/term && npm start
+
+term-check:
+	@cd tools/term && API_URL=http://127.0.0.1:9999 node tui.js 2>/dev/null; r=$$?; \
+	if [ $$r -ne 0 ]; then echo "term-check OK"; else echo "term-check FAIL: TUI should exit when backend unavailable"; exit 1; fi
+
+check:
+	@bash scripts/check-stack.sh
+
+test:
+	@echo ">> backend: unit + e2e..."
+	@cd backend && npm test
+	@cd backend && npm run test:e2e
+	@echo ">> web: lint + build..."
+	@cd web && npm run lint
+	@cd web && npm run build
+	@echo ">> tools/term: utils..."
+	@cd tools/term && npm test
+	@echo "test OK"
 
 term-c:
 	@if [ ! -f tools/term-c/monterm ]; then $(MAKE) install-term-c; fi
