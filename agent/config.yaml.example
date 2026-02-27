@@ -1,0 +1,18 @@
+# Copy to /etc/monagent/config.yaml and adjust.
+# Ensure file is readable only by monagent: chmod 600 /etc/monagent/config.yaml
+
+server_url: "https://monitor.example.com"
+host_id: "00000000-0000-0000-0000-000000000000"
+host_token: "your-host-token-from-backend"
+
+interval_sec: 10
+process_interval_sec: 30
+process_top_n: 15
+
+log_level: "info"
+
+disk_paths:
+  - "/"
+
+http_timeout_sec: 30
+http_retries: 3

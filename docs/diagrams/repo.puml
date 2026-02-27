@@ -1,0 +1,34 @@
+@startuml repo
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 10
+
+title Структура репозитория
+
+package "dmiti_idz" {
+  [Makefile\npackage.json\ndocker-compose.yml] as ROOT
+  package "bin" {
+    [localterm.js] as LT
+    [webterm.js] as WT
+  }
+  [scripts/install.sh] as SCRIPTS
+  package "agent" as AGENT {
+    [cmd/agent\ninternal:\ncollectors, procs\nsampler, encoder\ntransport] as A
+  }
+  package "backend" as BACKEND {
+    [prisma:\nschema, migrations, seed\nsrc: auth, hosts\ningest, metrics\nprocesses, alerts] as B
+  }
+  package "web" as WEB {
+    [Next.js\nhosts, hosts-id\nalerts, ProcessTable\nMetricChart] as W
+  }
+  package "tools" as TOOLS {
+    [term/\ntui.js, index.js] as TERM
+    [term-c/\nmain.c, Makefile] as TERMC
+  }
+  [docs/\ndiagrams, design\napi-contracts] as DOCS
+}
+
+ROOT -[hidden]down- AGENT
+ROOT -[hidden]down- BACKEND
+ROOT -[hidden]down- WEB
+@enduml

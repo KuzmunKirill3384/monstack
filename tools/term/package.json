@@ -1,0 +1,17 @@
+{
+  "name": "monitoring-term",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": { "monterm": "./index.js" },
+  "scripts": {
+    "start": "node tui.js",
+    "tui": "node tui.js",
+    "simple": "node index.js",
+    "watch": "node index.js --watch"
+  },
+  "dependencies": {
+    "blessed": "^0.1.81",
+    "chalk": "^5.3.0"
+  }
+}

@@ -1,0 +1,18 @@
+[Unit]
+Description=Monitoring Agent (monagent)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=monagent
+Group=monagent
+ExecStart=/usr/local/bin/monagent -config /etc/monagent/config.yaml
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=monagent
+
+[Install]
+WantedBy=multi-user.target

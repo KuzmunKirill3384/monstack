@@ -1,0 +1,21 @@
+@startuml dataflow
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Поток данных (кто куда шлёт)
+
+component "Agent (Go)\n/proc → batch\nJSON gzip" as AGENT
+component "Backend\n(NestJS)" as BACKEND
+database "PostgreSQL\n:5432" as DB
+component "Web\nNext.js :3001" as WEB
+component "TUI\nlocalterm / term-c" as TUI
+
+AGENT -right-> BACKEND : POST /v1/ingest\nBearer token
+BACKEND -right-> DB : INSERT\nmetrics_raw\nproc_snapshots
+BACKEND -left-> DB : SELECT
+BACKEND -down-> WEB : GET /hosts\n/metrics\n/processes
+BACKEND -down-> TUI : GET (JSON)
+WEB -up-> BACKEND : HTTP
+TUI -up-> BACKEND : HTTP
+@enduml

@@ -1,0 +1,25 @@
+@startuml lifecycle
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Жизненный цикл одной метрики
+
+participant "Хост Linux" as HOST
+participant "Agent" as AGENT
+participant "Backend" as BACKEND
+participant "PostgreSQL" as DB
+participant "Клиент\n(Web/TUI)" as CLIENT
+
+HOST -> AGENT : читает /proc\n(CPU, mem, …)
+AGENT -> BACKEND : POST /v1/ingest\n(batch, gzip)
+BACKEND -> BACKEND : проверка Bearer token\nhost_id = ?
+BACKEND -> DB : INSERT metrics_raw\nUPDATE host.last_seen_at
+DB --> BACKEND : OK
+
+CLIENT -> BACKEND : GET /metrics\n(from, to, host)
+BACKEND -> DB : SELECT ... WHERE
+DB --> BACKEND : строки
+BACKEND --> CLIENT : JSON
+CLIENT -> CLIENT : график / TUI
+@enduml

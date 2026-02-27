@@ -1,0 +1,29 @@
+@startuml docker
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Docker Compose — контейнеры и порты
+
+node "Docker Host" {
+  node "postgres" as PG {
+    component ":5432" as PG_PORT
+    note right : DB\nhealthcheck
+  }
+  node "backend" as BE {
+    component ":3000" as BE_PORT
+    note right : migrate + seed\nNestJS
+  }
+  node "web" as WEB {
+    component ":3001" as WEB_PORT
+    note right : Next.js\nAPI_URL=:3000
+  }
+  node "agent" as AG {
+    note right : нет порта\nшлёт на backend:3000
+  }
+}
+
+PG -right-> BE : healthy
+BE -down-> WEB : depends_on
+AG -up-> BE : POST /v1/ingest
+@enduml

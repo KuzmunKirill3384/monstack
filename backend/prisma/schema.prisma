@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("user")
+  createdAt    DateTime @default(now()) @map("created_at")
+}
+
+model Host {
+  id          String    @id @default(uuid())
+  name        String
+  tokenHash   String    @unique @map("token_hash")
+  agentUrl    String?   @map("agent_url")
+  os          String?   @default("linux")
+  arch        String?
+  tags        Json?     @default("{}")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  lastSeenAt  DateTime? @map("last_seen_at")
+  metricsRaw  MetricsRaw[]
+  procSnapshots ProcSnapshot[]
+  alertRules  AlertRule[]
+  alertEvents AlertEvent[]
+}
+
+model MetricsRaw {
+  id           String   @id @default(uuid())
+  ts           DateTime
+  hostId       String   @map("host_id")
+  cpuTotalPct  Float    @map("cpu_total_pct")
+  load1        Float
+  load5        Float
+  load15       Float
+  memUsedMb    Float    @map("mem_used_mb")
+  memTotalMb   Float    @map("mem_total_mb")
+  diskUsedPct  Float    @map("disk_used_pct")
+  netRxBps     BigInt   @map("net_rx_bps")
+  netTxBps     BigInt   @map("net_tx_bps")
+  host         Host     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  @@index([hostId, ts])
+  @@map("metrics_raw")
+}
+
+model ProcSnapshot {
+  id          String   @id @default(uuid())
+  hostId      String   @map("host_id")
+  ts          DateTime
+  pid         Int
+  name        String
+  cpuPct      Float    @map("cpu_pct")
+  rssMb       Float    @map("rss_mb")
+  ioReadBps   BigInt?  @map("io_read_bps")
+  ioWriteBps  BigInt?  @map("io_write_bps")
+  state       String?
+  host        Host     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  @@index([hostId, ts])
+  @@map("proc_snapshots")
+}
+
+model AlertRule {
+  id        String   @id @default(uuid())
+  hostId    String?  @map("host_id")
+  metric    String
+  op        String
+  threshold Float?
+  window    String   @default("5m")
+  severity  String   @default("warning")
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  host      Host?    @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  events    AlertEvent[]
+  @@map("alert_rules")
+}
+
+model AlertEvent {
+  id        String   @id @default(uuid())
+  hostId    String   @map("host_id")
+  ruleId    String   @map("rule_id")
+  ts        DateTime
+  status    String
+  message   String?
+  host      Host     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  rule      AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  @@index([hostId, ts])
+  @@map("alert_events")
+}

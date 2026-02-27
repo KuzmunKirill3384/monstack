@@ -1,0 +1,35 @@
+@startuml architecture
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+
+title Уровни системы (сверху вниз)
+
+package "Уровень пользователя" as USER #E8F4FD {
+  [Web\nбраузер :3001\nwebterm] as WEB
+  [localterm\nNode TUI\nblessed, 1s] as LOCAL
+  [term-c\nC, ncurses\n500 ms] as TERMC
+}
+
+package "Уровень Backend" as BACKEND #D4EDDA {
+  [NestJS + Fastify :3000] as API
+  component "GET /hosts\nGET /metrics\nGET /processes\nGET /alerts" as ROUTES
+  component "POST /v1/ingest\nBearer token\ngzip" as INGEST
+}
+
+package "Уровень данных" as DATA #FFF3CD {
+  [Agent (Go)\n/proc → CPU, mem, load\n10s метрики, 30s процессы] as AGENT
+  database "PostgreSQL :5432\nUser, Host, MetricsRaw\nProcSnapshot, AlertRule" as DB
+}
+
+WEB -down-> API : HTTP
+LOCAL -down-> API : HTTP
+TERMC -down-> API : HTTP
+API .. ROUTES
+API .. INGEST
+AGENT -up-> INGEST : POST batch
+API -right-> DB : чтение
+INGEST -right-> DB : запись
+@enduml

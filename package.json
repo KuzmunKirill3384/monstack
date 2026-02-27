@@ -1,0 +1,11 @@
+{
+  "name": "monitoring-stack",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OS metrics monitoring: agent, backend, web, terminal TUI",
+  "bin": {
+    "localterm": "./bin/localterm.js",
+    "webterm": "./bin/webterm.js"
+  }
+}

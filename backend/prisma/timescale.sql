@@ -1,0 +1,5 @@
+-- Optional: run after migrations when using TimescaleDB.
+-- CREATE EXTENSION IF NOT EXISTS timescaledb;
+-- SELECT create_hypertable('metrics_raw', 'ts', chunk_time_interval => INTERVAL '1 day', if_not_exists => TRUE);
+-- SELECT add_retention_policy('metrics_raw', INTERVAL '30 days', if_not_exists => TRUE);
+-- For continuous aggregates (metrics_1m, etc.) create materialized views and add_continuous_aggregate_policy.
