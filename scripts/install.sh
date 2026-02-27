@@ -13,7 +13,7 @@ fi
 
 echo ""
 echo ">> backend"
-(cd backend && npm install && npx prisma generate)
+(cd backend && npm install && DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/monitoring}" npx prisma generate)
 
 echo ""
 echo ">> web"

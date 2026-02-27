@@ -5,14 +5,18 @@
 # make term    — запустить Node TUI
 # make term-c  — собрать и запустить C TUI (если есть ncurses и curl)
 
-.PHONY: install install-backend install-web install-term install-term-c link \
+.PHONY: install install-all install-backend install-web install-term install-term-c link \
         up down logs term term-c check term-check test clean help diagrams
 
 SHELL := /bin/bash
 
+install-all:
+	@./scripts/install-all.sh
+
 help:
 	@echo "Monitoring Stack"
 	@echo ""
+	@echo "  make install-all — полная установка (Node, Docker, Make, ncurses, npm) — Ubuntu/macOS"
 	@echo "  make install     — установить зависимости + npm link (localterm, webterm)"
 	@echo "  make up          — запустить всё в Docker (postgres, backend, web, agent)"
 	@echo "  make down        — остановить контейнеры"
@@ -45,7 +49,7 @@ link:
 install-backend:
 	@echo ">> backend: npm install..."
 	@cd backend && npm install
-	@cd backend && npx prisma generate
+	@cd backend && DATABASE_URL="$${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/monitoring}" npx prisma generate
 	@echo ">> backend: prisma generate OK"
 
 install-web:

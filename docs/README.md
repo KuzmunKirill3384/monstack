@@ -24,10 +24,11 @@
 ## Быстрый старт (из корня репо)
 
 ```bash
-make install   # зависимости
-make up        # стек в Docker
-make check     # проверка готовности
-make term      # Node TUI
+make install-all   # полная установка (Node, Docker, ncurses, npm) — Ubuntu/macOS
+# или make install — только npm-пакеты, если всё уже есть
+make up            # стек в Docker
+make check         # проверка готовности
+make term          # Node TUI
 ```
 
 ---
@@ -40,6 +41,6 @@ backend/       NestJS + Fastify + Prisma
 web/           Next.js дашборд
 tools/term/    Node TUI (blessed)
 tools/term-c/  C TUI (ncurses)
-scripts/       check-stack.sh, install.sh
+scripts/       install-all.sh, install.sh, check-stack.sh
 docs/          документация
 ```
