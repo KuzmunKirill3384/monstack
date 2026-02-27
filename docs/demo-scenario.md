@@ -1,9 +1,72 @@
-# Demo scenario
+# Demo-сценарий
 
-1. Start stack: `docker compose up -d postgres backend web`.
-2. Apply migrations: `cd backend && npx prisma migrate deploy`.
-3. Seed user (optional): insert into User (id, email, password_hash, role) values (gen_random_uuid(), 'admin@test.local', encode(sha256('admin' || 'salt'), 'hex'), 'admin').
-4. Create host: insert into Host (id, name, token_hash, os, arch) values (gen_random_uuid(), 'demo-host', encode(sha256('demo-token'), 'hex'), 'linux', 'amd64'). Note the id and use token `demo-token` in agent config.
-5. Open http://localhost:3001, login with admin@test.local / admin.
-6. Run agent (on Linux or in container with /proc): set config server_url, host_id, host_token to the created host id and demo-token; run agent. Metrics should appear in Hosts and on the host detail page.
-7. Create alert rule: POST /alert-rules with { hostId: "<host-id>", metric: "host_down", op: ">", threshold: null } or metric "cpu_total_pct", op: ">", threshold: 90. Wait for cron (2 min) or trigger; check Alerts page.
+Быстрый запуск и проверка системы.
+
+---
+
+## 1. Запуск стека
+
+```bash
+make install
+make up
+```
+
+Миграции и seed применяются при старте backend. Дефолтный хост и пользователь создаются автоматически.
+
+---
+
+## 2. Проверка готовности
+
+```bash
+make check
+```
+
+Ожидаем: `OK backend`, `OK web`.
+
+---
+
+## 3. Веб и TUI
+
+| Действие | Команда |
+|----------|---------|
+| Дашборд в браузере | http://localhost:3001 или `webterm` |
+| Node TUI | `make term` или `localterm` |
+| C TUI | `make term-c` |
+
+---
+
+## 4. Первый хост (если agent в контейнере)
+
+При `make up` agent уже запущен. Через 10–30 с хост появится в списке. Если пусто — проверьте `docker compose logs agent`.
+
+---
+
+## 5. Добавить хост вручную (агент на своей машине)
+
+```bash
+# Вставить хост
+docker compose exec postgres psql -U postgres -d monitoring -c "
+  INSERT INTO \"Host\" (id, name, token_hash, \"created_at\")
+  VALUES (gen_random_uuid(), 'my-server',
+    encode(sha256('my-token'), 'hex'), NOW());
+"
+
+# Узнать id
+docker compose exec postgres psql -U postgres -d monitoring -c "SELECT id, name FROM \"Host\";"
+```
+
+На Linux-машине: собрать agent, в конфиге указать `host_id`, `host_token`, запустить.
+
+---
+
+## 6. Правило алерта
+
+Через веб: Alerts → Rules → Create. Или API:
+
+```bash
+curl -X POST http://localhost:3000/alert-rules \
+  -H "Content-Type: application/json" \
+  -d '{"hostId":null,"metric":"cpu_total_pct","op":">","threshold":90}'
+```
+
+Cron проверяет правила каждые 2 минуты.

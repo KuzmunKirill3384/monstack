@@ -1,4 +1,8 @@
-# API Contracts (OpenAPI-ориентированное описание)
+# API Contracts
+
+Описание API (ориентировано на OpenAPI/Swagger). Актуальная документация: http://localhost:3000/api/docs.
+
+---
 
 ## Base URL
 

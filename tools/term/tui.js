@@ -1,109 +1,50 @@
 #!/usr/bin/env node
 /**
- * TUI: Hosts | Processes | Metrics | Alerts. Keys: 1-4 or F1-F4 screens, Enter on host = processes, q quit.
+ * Monitoring TUI: Hosts | Processes | Metrics | Alerts | Rules.
+ * Keys: 1-5 or F1-F5 screens, Enter select, / search, s sort, r refresh, q quit.
  */
-const API_URL = process.env.API_URL || 'http://localhost:3000';
-const REFRESH_MS = 5000;
-const ALERTS_REFRESH_MS = 10000;
-const PROCESS_LIMIT = 200;
+import { config } from './config.js';
+import { theme, FOOTERS } from './theme.js';
+import {
+  apiGet,
+  apiPatch,
+  getMetrics,
+  getProcesses,
+  getAlerts,
+  getAlertRules,
+  checkBackend,
+} from './api.js';
+import { sortProcs, formatProcRow, sparkline, SORT_KEYS } from './utils.js';
 
-async function apiGet(path) {
-  const res = await globalThis.fetch(new URL(path, API_URL));
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-  return res.json();
-}
-
-function getMetrics(hostId, from, to) {
-  const params = new URLSearchParams({
-    host: hostId,
-    from: from.toISOString(),
-    to: to.toISOString(),
-    resolution: 'raw',
-  });
-  return apiGet(`/metrics?${params}`);
-}
-
-function getProcesses(hostId, limit = PROCESS_LIMIT) {
-  const to = new Date();
-  const from = new Date(to.getTime() - 120000);
-  const params = new URLSearchParams({
-    host: hostId,
-    from: from.toISOString(),
-    to: to.toISOString(),
-    limit: String(limit),
-  });
-  return apiGet(`/processes?${params}`);
-}
-
-function getAlerts(opts = {}) {
-  const params = new URLSearchParams();
-  if (opts.host) params.set('host', opts.host);
-  if (opts.from) params.set('from', opts.from.toISOString());
-  if (opts.to) params.set('to', opts.to.toISOString());
-  if (opts.status) params.set('status', opts.status);
-  return apiGet(`/alerts?${params}`);
-}
-
-const SORT_KEYS = ['cpu_pct', 'rss_mb', 'name', 'pid'];
-function sortProcs(procs, sortBy, desc) {
-  const key = sortBy || 'cpu_pct';
-  const mult = desc ? -1 : 1;
-  return [...procs].sort((a, b) => {
-    let va = a[key];
-    let vb = b[key];
-    if (typeof va === 'string') {
-      va = (va || '').toLowerCase();
-      vb = (vb || '').toLowerCase();
-      return mult * (va < vb ? -1 : va > vb ? 1 : 0);
-    }
-    return mult * (va - vb);
-  });
-}
-
-function formatProcRow(p) {
-  const name = (p.name || '').slice(0, 36);
-  return [
-    String(p.pid),
-    name,
-    p.cpu_pct.toFixed(1),
-    p.rss_mb.toFixed(1),
-    (p.state || '-').slice(0, 4),
-  ];
-}
-
-const SPARK_CHARS = '▁▂▃▄▅▆▇█';
-function sparkline(values, width = 20) {
-  if (!values.length) return '';
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const step = Math.max(1, Math.ceil(values.length / width));
-  let out = '';
-  for (let i = 0; i < width; i++) {
-    const idx = Math.min(i * step, values.length - 1);
-    const v = values[idx];
-    const pct = (v - min) / range;
-    const ci = Math.min(Math.floor(pct * SPARK_CHARS.length), SPARK_CHARS.length - 1);
-    out += SPARK_CHARS[ci];
-  }
-  return out;
-}
+const MODES = ['hosts', 'processes', 'metrics', 'alerts', 'rules'];
 
 async function runTui() {
+  const ok = await checkBackend();
+  if (!ok) {
+    process.stderr.write(
+      `\nBackend not available at ${config.API_URL}\nRun: make up\n\n`
+    );
+    process.exit(1);
+  }
+
   const blessed = (await import('blessed')).default;
   const screen = blessed.screen({ smartCSR: true, title: 'Monitoring TUI' });
 
-  let mode = 'hosts'; // hosts | processes | metrics | alerts
+  let mode = 'hosts';
   let sortBy = 'cpu_pct';
   let sortDesc = true;
   let hostIndex = 0;
   let hosts = [];
   let processes = [];
   let metrics = null;
-  let metricsHistory = [];
   let alerts = [];
-  let alertsStatusFilter = ''; // '' | 'firing' | 'ok'
+  let alertRules = [];
+  let alertsStatusFilter = '';
   let filterStr = '';
+  let hostFilterStr = '';
+  let loading = false;
+  let lastError = null;
+  let refreshAbort = null;
 
   const header = blessed.box({
     parent: screen,
@@ -112,7 +53,7 @@ async function runTui() {
     width: '100%',
     height: 3,
     tags: true,
-    style: { bg: 'blue', fg: 'white', bold: true },
+    style: theme.header,
     content: ' Loading...',
   });
 
@@ -125,12 +66,7 @@ async function runTui() {
     keys: true,
     vi: true,
     mouse: true,
-    style: {
-      header: { fg: 'cyan', bold: true },
-      cell: { fg: 'white' },
-      selected: { bg: 'blue', fg: 'white' },
-      border: { fg: 'gray' },
-    },
+    style: theme.table,
     align: 'left',
     pad: 1,
     noCellBorders: true,
@@ -143,49 +79,72 @@ async function runTui() {
     width: '100%',
     height: 1,
     tags: true,
-    style: { fg: 'black', bg: 'cyan' },
+    style: theme.footer,
     content: '',
   });
-
-  const FOOTERS = {
-    hosts: ' 1:Hosts 2:Processes 3:Metrics 4:Alerts  Enter:select host  r:refresh  q:quit ',
-    processes: ' 1:Hosts 2:Processes 3:Metrics 4:Alerts  s:sort  f:filter  k:kill  h:host  r:refresh  q:quit ',
-    metrics: ' 1:Hosts 2:Processes 3:Metrics 4:Alerts  r:refresh  q:quit ',
-    alerts: ' 1:Hosts 2:Processes 3:Metrics 4:Alerts  f:filter status  r:refresh  q:quit ',
-  };
 
   function setFooter() {
     footer.setContent(FOOTERS[mode] || FOOTERS.hosts);
   }
 
+  function setLoading(value) {
+    loading = value;
+  }
+
   function setHeaderText(line1, line2 = '') {
     const hostName = hosts[hostIndex]?.name || '—';
-    const m = metrics && metrics.length ? metrics[metrics.length - 1] : null;
-    const cpu = m ? `${m.cpu_total_pct.toFixed(1)}%` : '—';
-    const mem = m ? `${m.mem_used_mb.toFixed(0)}/${m.mem_total_mb.toFixed(0)} MB` : '—';
-    const load = m ? `${m.load1.toFixed(2)} ${m.load5.toFixed(2)} ${m.load15.toFixed(2)}` : '—';
-    header.setContent(
-      ` {bold}${hostName}{/bold}  CPU ${cpu}  Mem ${mem}  Load ${load}\n` +
-        (line2 ? ` ${line2}` : '')
+    const m = metrics?.length ? metrics[metrics.length - 1] : null;
+    const cpu = m ? `${(m.cpu_total_pct ?? 0).toFixed(1)}%` : '—';
+    const mem = m
+      ? `${(m.mem_used_mb ?? 0).toFixed(0)}/${(m.mem_total_mb ?? 0).toFixed(0)} MB`
+      : '—';
+    const load = m
+      ? `${(m.load1 ?? 0).toFixed(2)} ${(m.load5 ?? 0).toFixed(2)} ${(m.load15 ?? 0).toFixed(2)}`
+      : '—';
+    const cpuVals = (metrics || []).map((x) => x.cpu_total_pct).filter(Boolean);
+    const spark = sparkline(cpuVals.slice(-30), 12);
+    const loadLine =
+      loading && lastError
+        ? ` Error: ${lastError}`
+        : loading
+          ? ` Loading...`
+          : lastError
+            ? ` Error: ${lastError}`
+            : ` {bold}${hostName}{/bold}  CPU ${cpu}  Mem ${mem}  Load ${load}  ${spark ? `[${spark}]` : ''}`;
+    header.setContent(` ${loadLine}\n` + (line2 ? ` ${line2}` : ''));
+  }
+
+  function filteredHosts() {
+    if (!hostFilterStr) return hosts;
+    const f = hostFilterStr.toLowerCase();
+    return hosts.filter(
+      (h) =>
+        (h.name || '').toLowerCase().includes(f) ||
+        (h.id || '').toLowerCase().includes(f)
     );
   }
 
   function renderHosts() {
+    const list = filteredHosts();
     const rows = [
       ['NAME', 'ONLINE', 'LAST SEEN', 'CPU%', 'MEM'],
-      ...hosts.map((h) => {
-        const last = (h.lastMetric || {});
-        const cpu = last.cpu_total_pct != null ? `${last.cpu_total_pct.toFixed(1)}%` : '—';
-        const mem = last.mem_used_mb != null && last.mem_total_mb != null
-          ? `${last.mem_used_mb.toFixed(0)}/${last.mem_total_mb.toFixed(0)}` : '—';
-        const seen = h.lastSeenAt
-          ? new Date(h.lastSeenAt).toLocaleString()
-          : '—';
+      ...list.map((h) => {
+        const last = h.lastMetric || {};
+        const cpu =
+          last.cpu_total_pct != null ? `${last.cpu_total_pct.toFixed(1)}%` : '—';
+        const mem =
+          last.mem_used_mb != null && last.mem_total_mb != null
+            ? `${last.mem_used_mb.toFixed(0)}/${last.mem_total_mb.toFixed(0)}`
+            : '—';
+        const seen = h.lastSeenAt ? new Date(h.lastSeenAt).toLocaleString() : '—';
         return [h.name || h.id?.slice(0, 8), h.online ? 'yes' : 'no', seen, cpu, mem];
       }),
     ];
-    table.setData(rows);
-    setHeaderText('Hosts', `Hosts: ${hosts.length}`);
+    table.setData(rows.length > 1 ? rows : [['(no hosts match filter)']]);
+    setHeaderText(
+      'Hosts',
+      `Hosts: ${list.length}${hostFilterStr ? ` (filter: "${hostFilterStr}")` : ''}`
+    );
     setFooter();
     screen.render();
   }
@@ -194,14 +153,17 @@ async function runTui() {
     let list = processes;
     if (filterStr) {
       const f = filterStr.toLowerCase();
-      list = list.filter((p) => String(p.pid).includes(f) || (p.name || '').toLowerCase().includes(f));
+      list = list.filter(
+        (p) =>
+          String(p.pid).includes(f) || (p.name || '').toLowerCase().includes(f)
+      );
     }
     const sorted = sortProcs(list, sortBy, sortDesc);
     const rows = [
       ['PID', 'NAME', 'CPU%', 'RSS', 'STATE'],
       ...sorted.map(formatProcRow),
     ];
-    table.setData(rows);
+    table.setData(rows.length > 1 ? rows : [['(no processes)']]);
     setHeaderText(
       '',
       `Processes: ${sorted.length}${filterStr ? ` (filter: "${filterStr}")` : ''}  Sort: ${sortBy} ${sortDesc ? '↓' : '↑'}`
@@ -212,17 +174,32 @@ async function runTui() {
 
   function renderMetrics() {
     const host = hosts[hostIndex];
-    const m = metrics && metrics.length ? metrics[metrics.length - 1] : null;
-    const cpuVals = (metrics || []).map((x) => x.cpu_total_pct);
+    const m = metrics?.length ? metrics[metrics.length - 1] : null;
+    const cpuVals = (metrics || []).map((x) => x.cpu_total_pct).filter(Boolean);
+    const memVals = (metrics || []).map(
+      (x) => (x.mem_used_mb / (x.mem_total_mb || 1)) * 100
+    );
     const spark = sparkline(cpuVals.slice(-40), 20);
+    const memSpark = sparkline(memVals.slice(-40), 12);
     const rows = [
       ['Metric', 'Value'],
-      ['CPU %', m ? `${m.cpu_total_pct.toFixed(2)}%` : '—'],
-      ['Load 1/5/15', m ? `${m.load1.toFixed(2)} ${m.load5.toFixed(2)} ${m.load15.toFixed(2)}` : '—'],
-      ['Mem used/total MB', m ? `${m.mem_used_mb.toFixed(0)} / ${m.mem_total_mb.toFixed(0)}` : '—'],
-      ['Disk %', m ? `${m.disk_used_pct.toFixed(1)}%` : '—'],
+      ['CPU %', m ? `${(m.cpu_total_pct ?? 0).toFixed(2)}%` : '—'],
+      [
+        'Load 1/5/15',
+        m
+          ? `${(m.load1 ?? 0).toFixed(2)} ${(m.load5 ?? 0).toFixed(2)} ${(m.load15 ?? 0).toFixed(2)}`
+          : '—',
+      ],
+      [
+        'Mem used/total MB',
+        m
+          ? `${(m.mem_used_mb ?? 0).toFixed(0)} / ${(m.mem_total_mb ?? 0).toFixed(0)}`
+          : '—',
+      ],
+      ['Disk %', m ? `${(m.disk_used_pct ?? 0).toFixed(1)}%` : '—'],
       ['Net Rx/Tx Bps', m ? `${m.net_rx_bps} / ${m.net_tx_bps}` : '—'],
-      ['CPU spark (last)', spark || '—'],
+      ['CPU spark', spark || '—'],
+      ['Mem % spark', memSpark || '—'],
     ];
     table.setData(rows);
     setHeaderText('Metrics', host ? `Host: ${host.name}` : '');
@@ -233,22 +210,60 @@ async function runTui() {
   function renderAlerts() {
     let list = alerts;
     if (alertsStatusFilter) {
-      list = list.filter((e) => (e.status || '').toLowerCase() === alertsStatusFilter.toLowerCase());
+      list = list.filter(
+        (e) =>
+          (e.status || '').toLowerCase() === alertsStatusFilter.toLowerCase()
+      );
     }
     const rows = [
       ['TIME', 'HOST', 'RULE', 'STATUS', 'MESSAGE'],
       ...list.slice(0, 100).map((e) => {
-        const hostName = hosts.find((h) => h.id === e.hostId)?.name || e.hostId?.slice(0, 8) || '—';
+        const hostName =
+          hosts.find((h) => h.id === e.hostId)?.name ||
+          e.hostId?.slice(0, 8) ||
+          '—';
         const time = e.ts ? new Date(e.ts).toLocaleString() : '—';
         const rule = (e.ruleId || '').slice(0, 12);
         const msg = (e.message || '').slice(0, 24);
         return [time, hostName, rule, e.status || '—', msg];
       }),
     ];
-    table.setData(rows);
+    table.setData(rows.length > 1 ? rows : [['(no alerts)']]);
     setHeaderText(
       'Alerts',
       `Events: ${list.length}${alertsStatusFilter ? ` (status=${alertsStatusFilter})` : ''}`
+    );
+    setFooter();
+    screen.render();
+  }
+
+  function renderRules() {
+    const host = hosts[hostIndex];
+    const hostId = host?.id;
+    const list = hostId
+      ? alertRules.filter((r) => !r.hostId || r.hostId === hostId)
+      : alertRules;
+    const rows = [
+      ['HOST', 'METRIC', 'OP', 'THRESHOLD', 'ENABLED', 'SEVERITY'],
+      ...list.map((r) => {
+        const hostName =
+          r.hostId
+            ? hosts.find((h) => h.id === r.hostId)?.name || r.hostId.slice(0, 8)
+            : 'any';
+        return [
+          hostName,
+          (r.metric || '').slice(0, 12),
+          r.op || '—',
+          r.threshold != null ? String(r.threshold) : '—',
+          r.enabled ? 'yes' : 'no',
+          r.severity || '—',
+        ];
+      }),
+    ];
+    table.setData(rows.length > 1 ? rows : [['(no rules)']]);
+    setHeaderText(
+      'Alert Rules',
+      host ? `Host: ${host.name}` : 'All hosts'
     );
     setFooter();
     screen.render();
@@ -259,14 +274,25 @@ async function runTui() {
     else if (mode === 'processes') renderProcesses();
     else if (mode === 'metrics') renderMetrics();
     else if (mode === 'alerts') renderAlerts();
+    else if (mode === 'rules') renderRules();
   }
 
   async function refresh() {
+    if (refreshAbort) {
+      refreshAbort.abort?.();
+    }
+    setLoading(true);
+    lastError = null;
+    render();
+
     try {
       hosts = await apiGet('/hosts');
       if (!hosts.length) {
-        header.setContent(' No hosts. Start agent: docker compose up -d agent\n');
+        header.setContent(
+          ' No hosts. Start agent: docker compose up -d agent\n'
+        );
         table.setData([['(no data)']]);
+        setLoading(false);
         setFooter();
         screen.render();
         return;
@@ -281,9 +307,8 @@ async function runTui() {
           hosts.map(async (h) => {
             try {
               const data = await getMetrics(h.id, from, to);
-              const last = data && data.length ? data[data.length - 1] : null;
-              h.lastMetric = last;
-            } catch (_) {
+              h.lastMetric = data?.length ? data[data.length - 1] : null;
+            } catch {
               h.lastMetric = null;
             }
           })
@@ -298,21 +323,30 @@ async function runTui() {
           mode === 'processes' ? getProcesses(host.id) : Promise.resolve([]),
         ]);
         metrics = metricsData;
-        metricsHistory = metricsData || [];
         if (mode === 'processes') processes = procsData;
       }
 
       if (mode === 'alerts') {
         const to = new Date();
         const from = new Date(to.getTime() - 86400000);
-        alerts = await getAlerts({ from, to, status: alertsStatusFilter || undefined });
+        alerts = await getAlerts({
+          from,
+          to,
+          status: alertsStatusFilter || undefined,
+        });
       }
 
+      if (mode === 'rules') {
+        alertRules = await getAlertRules(host?.id);
+      }
+
+      lastError = null;
       render();
     } catch (e) {
-      header.setContent(` Error: ${e.message}\n`);
-      setFooter();
-      screen.render();
+      lastError = e.message;
+      render();
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -321,199 +355,242 @@ async function runTui() {
     try {
       const to = new Date();
       const from = new Date(to.getTime() - 86400000);
-      alerts = await getAlerts({ from, to, status: alertsStatusFilter || undefined });
+      alerts = await getAlerts({
+        from,
+        to,
+        status: alertsStatusFilter || undefined,
+      });
       renderAlerts();
-    } catch (_) {}
+    } catch {}
   }
 
   table.on('select', (_, i) => {
-    if (mode === 'hosts' && i > 0 && i <= hosts.length) {
-      hostIndex = i - 1;
-      mode = 'processes';
-      refresh();
-    }
-  });
-
-  screen.key(['1', 'f1'], () => {
-    mode = 'hosts';
-    refresh();
-  });
-  screen.key(['2', 'f2'], () => {
-    mode = 'processes';
-    refresh();
-  });
-  screen.key(['3', 'f3'], () => {
-    mode = 'metrics';
-    refresh();
-  });
-  screen.key(['4', 'f4'], () => {
-    mode = 'alerts';
-    refresh();
-  });
-
-  screen.key(['enter'], () => {
     if (mode === 'hosts' && hosts.length) {
-      hostIndex = table.selected;
-      if (hostIndex >= 1 && hostIndex <= hosts.length) {
-        hostIndex = hostIndex - 1;
-        mode = 'processes';
-        refresh();
+      const list = filteredHosts();
+      if (i > 0 && i <= list.length) {
+        const idx = hosts.indexOf(list[i - 1]);
+        if (idx >= 0) {
+          hostIndex = idx;
+          mode = 'processes';
+          refresh();
+        }
+      }
+    } else if (mode === 'rules' && alertRules.length) {
+      const list = hostIndex >= 0
+        ? alertRules.filter((r) => !r.hostId || r.hostId === hosts[hostIndex]?.id)
+        : alertRules;
+      if (i > 0 && i <= list.length) {
+        const rule = list[i - 1];
+        const newEnabled = !rule.enabled;
+        apiPatch(`/alert-rules/${rule.id}`, { enabled: newEnabled })
+          .then(() => refresh())
+          .catch(() => {});
       }
     }
   });
 
-  screen.key(['s'], () => {
-    if (mode === 'processes') {
-      const idx = SORT_KEYS.indexOf(sortBy);
-      sortBy = SORT_KEYS[(idx + 1) % SORT_KEYS.length];
-      renderProcesses();
-    }
-  });
-
-  screen.key(['S'], () => {
-    if (mode === 'processes') {
-      sortDesc = !sortDesc;
-      renderProcesses();
-    }
-  });
-
-  screen.key(['r', 'R'], () => {
-    refresh();
-  });
-
-  async function sendSignal(pid, signal) {
-    const host = hosts[hostIndex];
-    if (!host) return;
-    try {
-      const res = await fetch(
-        new URL(`/hosts/${host.id}/processes/${pid}/signal`, API_URL),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ signal }),
-        }
-      );
-      if (!res.ok) throw new Error(await res.text() || res.statusText);
-      refresh();
-    } catch (e) {
-      setHeaderText('', `Signal failed: ${e.message}`);
-      screen.render();
-    }
-  }
-
-  screen.key(['k', 'f9'], () => {
-    if (mode !== 'processes' || !processes.length) return;
-    let list = processes;
-    if (filterStr) {
-      const f = filterStr.toLowerCase();
-      list = list.filter((p) => String(p.pid).includes(f) || (p.name || '').toLowerCase().includes(f));
-    }
-    const sorted = sortProcs(list, sortBy, sortDesc);
-    const idx = table.selected - 1;
-    if (idx < 0 || idx >= sorted.length) return;
-    const proc = sorted[idx];
-    const sigs = ['SIGTERM', 'SIGKILL'];
-    const listbox = blessed.list({
-      parent: screen,
-      top: 'center',
-      left: 'center',
-      width: 30,
-      height: 6,
-      tags: true,
-      border: { type: 'line' },
-      style: { border: { fg: 'cyan' }, selected: { bg: 'blue' } },
-      keys: true,
-      items: ['SIGTERM', 'SIGKILL'],
-    });
-    listbox.on('select', async (item, i) => {
-      const signal = sigs[i];
-      listbox.destroy();
-      const confirmBox = blessed.prompt({
-        parent: screen,
-        top: 'center',
-        left: 'center',
-        width: '50%',
-        height: 'shrink',
-        tags: true,
-        border: { type: 'line' },
-        style: { border: { fg: 'yellow' } },
+  const bindScreen = () => {
+    for (let i = 1; i <= 5; i++) {
+      const k = String(i);
+      const fk = `f${i}`;
+      screen.key([k, fk], () => {
+        mode = MODES[i - 1];
+        refresh();
       });
-      confirmBox.input(
-        ` PID ${proc.pid} (${(proc.name || '').slice(0, 20)}), send ${signal}? (y/n): `,
-        'n',
-        async (err, value) => {
-          if (!err && (value || '').toLowerCase().startsWith('y')) {
-            await sendSignal(proc.pid, signal);
+    }
+
+    screen.key(['enter'], () => {
+      if (mode === 'hosts' && hosts.length) {
+        const list = filteredHosts();
+        const sel = table.selected;
+        if (sel >= 1 && sel <= list.length) {
+          const idx = hosts.indexOf(list[sel - 1]);
+          if (idx >= 0) {
+            hostIndex = idx;
+            mode = 'processes';
+            refresh();
           }
-          render();
         }
-      );
+      }
     });
-    listbox.key(['escape'], () => {
-      listbox.destroy();
-      render();
-    });
-    screen.render();
-  });
 
-  screen.key(['h'], () => {
-    if (mode === 'processes' && hosts.length > 1) {
-      hostIndex = (hostIndex + 1) % hosts.length;
-      refresh();
-    }
-  });
-
-  screen.key(['f'], () => {
-    if (mode === 'processes') {
-      const prompt = blessed.prompt({
-        parent: screen,
-        top: 'center',
-        left: 'center',
-        width: '50%',
-        height: 'shrink',
-        tags: true,
-        border: { type: 'line' },
-        style: { border: { fg: 'cyan' } },
-      });
-      prompt.input(' Filter (PID or name): ', filterStr, (err, value) => {
-        if (!err && value != null) filterStr = String(value).trim();
+    screen.key(['s'], () => {
+      if (mode === 'processes') {
+        const idx = SORT_KEYS.indexOf(sortBy);
+        sortBy = SORT_KEYS[(idx + 1) % SORT_KEYS.length];
         renderProcesses();
-      });
-    } else if (mode === 'alerts') {
-      const prompt = blessed.prompt({
+      }
+    });
+
+    screen.key(['S'], () => {
+      if (mode === 'processes') {
+        sortDesc = !sortDesc;
+        renderProcesses();
+      }
+    });
+
+    screen.key(['r', 'R'], () => refresh());
+
+    screen.key(['/'], () => {
+      if (mode === 'hosts') {
+        const prompt = blessed.prompt({
+          parent: screen,
+          top: 'center',
+          left: 'center',
+          width: '50%',
+          height: 'shrink',
+          tags: true,
+          border: { type: 'line' },
+          style: theme.prompt,
+        });
+        prompt.input(' Search hosts (name or id): ', hostFilterStr, (err, value) => {
+          if (!err && value != null) hostFilterStr = String(value).trim();
+          renderHosts();
+        });
+      }
+    });
+
+    screen.key(['f'], () => {
+      if (mode === 'processes') {
+        const prompt = blessed.prompt({
+          parent: screen,
+          top: 'center',
+          left: 'center',
+          width: '50%',
+          height: 'shrink',
+          tags: true,
+          border: { type: 'line' },
+          style: theme.prompt,
+        });
+        prompt.input(' Filter (PID or name): ', filterStr, (err, value) => {
+          if (!err && value != null) filterStr = String(value).trim();
+          renderProcesses();
+        });
+      } else if (mode === 'alerts') {
+        const prompt = blessed.prompt({
+          parent: screen,
+          top: 'center',
+          left: 'center',
+          width: '50%',
+          height: 'shrink',
+          tags: true,
+          border: { type: 'line' },
+          style: theme.prompt,
+        });
+        prompt.input(
+          ' Status filter (firing|ok|empty): ',
+          alertsStatusFilter,
+          (err, value) => {
+            if (!err && value != null) alertsStatusFilter = String(value).trim();
+            renderAlerts();
+          }
+        );
+      }
+    });
+
+    screen.key(['h'], () => {
+      if (mode === 'processes' && hosts.length > 1) {
+        hostIndex = (hostIndex + 1) % hosts.length;
+        refresh();
+      }
+    });
+
+    screen.key(['k', 'f9'], () => {
+      if (mode !== 'processes' || !processes.length) return;
+      let list = processes;
+      if (filterStr) {
+        const f = filterStr.toLowerCase();
+        list = list.filter(
+          (p) =>
+            String(p.pid).includes(f) || (p.name || '').toLowerCase().includes(f)
+        );
+      }
+      const sorted = sortProcs(list, sortBy, sortDesc);
+      const idx = table.selected - 1;
+      if (idx < 0 || idx >= sorted.length) return;
+      const proc = sorted[idx];
+      const sigs = ['SIGTERM', 'SIGKILL'];
+      const listbox = blessed.list({
         parent: screen,
         top: 'center',
         left: 'center',
-        width: '50%',
-        height: 'shrink',
+        width: 30,
+        height: 6,
         tags: true,
         border: { type: 'line' },
-        style: { border: { fg: 'cyan' } },
+        style: { ...theme.table, border: theme.prompt.border },
+        keys: true,
+        items: sigs,
       });
-      prompt.input(' Status filter (firing|ok|empty): ', alertsStatusFilter, (err, value) => {
-        if (!err && value != null) alertsStatusFilter = String(value).trim();
-        renderAlerts();
+      listbox.on('select', async (item, i) => {
+        const signal = sigs[i];
+        listbox.destroy();
+        const confirmBox = blessed.prompt({
+          parent: screen,
+          top: 'center',
+          left: 'center',
+          width: '50%',
+          height: 'shrink',
+          tags: true,
+          border: { type: 'line' },
+          style: theme.prompt,
+        });
+        confirmBox.input(
+          ` PID ${proc.pid} (${(proc.name || '').slice(0, 20)}), send ${signal}? (y/n): `,
+          'n',
+          async (err, value) => {
+            if (!err && (value || '').toLowerCase().startsWith('y')) {
+              const host = hosts[hostIndex];
+              try {
+                await fetch(
+                  new URL(
+                    `/hosts/${host.id}/processes/${proc.pid}/signal`,
+                    config.API_URL
+                  ),
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signal }),
+                  }
+                );
+                refresh();
+              } catch (e) {
+                lastError = e.message;
+                render();
+              }
+            }
+            render();
+          }
+        );
       });
-    }
-  });
+      listbox.key(['escape'], () => {
+        listbox.destroy();
+        render();
+      });
+      screen.render();
+    });
 
-  screen.key(['q', 'C-c', 'escape'], () => process.exit(0));
+    screen.key(['q', 'C-c', 'escape'], quit);
+  };
 
-  await refresh();
-  let interval = setInterval(refresh, REFRESH_MS);
+  let interval;
   let alertsInterval;
-  function setIntervals() {
-    clearInterval(interval);
-    interval = setInterval(refresh, REFRESH_MS);
-    if (alertsInterval) clearInterval(alertsInterval);
-    alertsInterval = setInterval(refreshAlertsOnly, ALERTS_REFRESH_MS);
-  }
-  setIntervals();
 
-  process.on('exit', () => {
-    clearInterval(interval);
+  function quit() {
+    if (interval) clearInterval(interval);
     if (alertsInterval) clearInterval(alertsInterval);
-  });
+    process.stdout.write('\nBye\n');
+    process.exit(0);
+  }
+
+  bindScreen();
+  await refresh();
+
+  interval = setInterval(refresh, config.REFRESH_MS);
+  alertsInterval = setInterval(refreshAlertsOnly, config.ALERTS_REFRESH_MS);
+
+  process.on('SIGINT', quit);
+  process.on('SIGTERM', quit);
 }
 
 runTui().catch((e) => {

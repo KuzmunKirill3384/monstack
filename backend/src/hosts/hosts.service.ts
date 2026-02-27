@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { MetricsRaw } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
 
@@ -19,13 +20,13 @@ export class HostsService {
       where: { ts: { gte: fiveMinAgo } },
       orderBy: { ts: 'desc' },
     });
-    const lastMetricByHost = new Map<string, (typeof recentMetrics)[0]>();
+    const lastMetricByHost = new Map<string, MetricsRaw>();
     for (const m of recentMetrics) {
       if (!lastMetricByHost.has(m.hostId)) lastMetricByHost.set(m.hostId, m);
     }
     return hosts
       .map((h) => {
-        const last = lastMetricByHost.get(h.id);
+        const last: MetricsRaw | undefined = lastMetricByHost.get(h.id);
         return {
           ...h,
           online: h.lastSeenAt ? h.lastSeenAt >= cutoff : false,

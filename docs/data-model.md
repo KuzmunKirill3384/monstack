@@ -1,5 +1,7 @@
 # Data Model
 
+Текущая схема БД (Prisma). ER и планы по TimescaleDB — ниже.
+
 ## ER (логическая схема)
 
 ```mermaid
@@ -46,7 +48,9 @@ erDiagram
 | created_at | timestamptz | |
 | last_seen_at | timestamptz nullable | Обновляется при каждом ingest |
 
-### metrics_raw (TimescaleDB hypertable)
+### metrics_raw
+
+**План:** TimescaleDB hypertable по ts (chunk_interval 1 day). Сейчас — обычная таблица.
 
 Сырые метрики, time = ts.
 

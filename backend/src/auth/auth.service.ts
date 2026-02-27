@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
 
@@ -10,7 +11,7 @@ export class AuthService {
     private jwt: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string) {
+  async validateUser(email: string, password: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) return null;
     const hash = crypto
@@ -21,7 +22,7 @@ export class AuthService {
     return user;
   }
 
-  async login(user: { id: string; email: string; role: string }) {
+  async login(user: User) {
     return {
       access_token: this.jwt.sign({
         sub: user.id,
