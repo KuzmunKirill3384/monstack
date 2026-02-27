@@ -6,7 +6,7 @@
 # make term-c  — собрать и запустить C TUI (если есть ncurses и curl)
 
 .PHONY: install install-all install-backend install-web install-term install-term-c link \
-        up down logs term term-c check term-check test clean help diagrams
+        up down logs term term-c localterm webterm check term-check test clean help diagrams
 
 SHELL := /bin/bash
 
@@ -22,8 +22,8 @@ help:
 	@echo "  make down        — остановить контейнеры"
 	@echo "  make check       — проверить готовность стека (backend, web)"
 	@echo "  make logs        — логи docker compose"
-	@echo "  localterm        — терминальный TUI (баннер + htop-like), после make install"
-	@echo "  webterm          — поднять Docker и открыть веб в браузере"
+	@echo "  make localterm   — терминальный TUI с баннером (без npm link)"
+	@echo "  make webterm     — поднять Docker и открыть веб в браузере"
 	@echo "  make term        — запустить Node TUI (1-5|F1-F5 экраны, Enter, s, f, r, q)"
 	@echo "  make term-check  — smoke-тест Node TUI (запуск 3 сек с недоступным API)"
 	@echo "  make term-c      — быстрый TUI на C (1-4 экраны, 500 ms)"
@@ -67,17 +67,25 @@ install-term-c:
 	@cd tools/term-c && make 2>/dev/null || (echo "Нужны: gcc, ncurses, libcurl. Ubuntu: sudo apt install build-essential libncurses-dev libcurl4-openssl-dev; macOS: brew install ncurses curl" && exit 1)
 
 up:
-	docker compose up -d --build
+	@command -v docker >/dev/null 2>&1 || (echo "Установите Docker: https://docs.docker.com/engine/install/"; exit 1)
+	@command -v docker-compose >/dev/null 2>&1 || (echo ""; echo "Нужен docker-compose. Установите:"; echo "  sudo apt install docker-compose"; echo "или скачайте: https://github.com/docker/compose/releases"; echo ""; exit 1)
+	@docker-compose up -d --build
 	@echo "Backend: http://localhost:3000  Web: http://localhost:3001"
 
 down:
-	docker compose down
+	@docker-compose down
 
 logs:
-	docker compose logs -f
+	@docker-compose logs -f
 
 term:
 	@cd tools/term && npm start
+
+localterm:
+	@node bin/localterm.js
+
+webterm:
+	@node bin/webterm.js
 
 term-check:
 	@cd tools/term && API_URL=http://127.0.0.1:9999 node tui.js 2>/dev/null; r=$$?; \
@@ -99,7 +107,7 @@ test:
 
 term-c:
 	@if [ ! -f tools/term-c/monterm ]; then $(MAKE) install-term-c; fi
-	@cd tools/term-c && ./monterm
+	@cd tools/term-c && (./monterm; r=$$?; [ $$r -eq 126 ] && rm -f monterm && $(MAKE) install-term-c && ./monterm || exit $$r)
 
 clean:
 	rm -rf backend/node_modules web/node_modules tools/term/node_modules
