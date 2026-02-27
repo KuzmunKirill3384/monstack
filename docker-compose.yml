@@ -44,6 +44,8 @@ services:
       - backend
 
   agent:
+    profiles:
+      - agent
     build: ./agent
     environment:
       SERVER_URL: http://backend:3000
