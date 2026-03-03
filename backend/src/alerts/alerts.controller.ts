@@ -1,5 +1,6 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Sse, UseGuards } from '@nestjs/common';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Observable, interval, map } from 'rxjs';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt.guard';
 import { AlertsService } from './alerts.service';
 
@@ -8,6 +9,11 @@ import { AlertsService } from './alerts.service';
 @UseGuards(OptionalJwtAuthGuard)
 export class AlertsController {
   constructor(private alerts: AlertsService) {}
+
+  @Sse('stream')
+  stream(): Observable<{ data: { refresh: boolean } }> {
+    return interval(10000).pipe(map(() => ({ data: { refresh: true } })));
+  }
 
   @Get()
   @ApiQuery({ name: 'host', required: false })

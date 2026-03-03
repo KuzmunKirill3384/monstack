@@ -35,6 +35,7 @@ jobs:
       - run: cd web && npm ci
       - run: cd web && npm run lint -- --max-warnings 0 .
       - run: cd web && npm run build
+      - run: cd web && npm test
 
   agent:
     runs-on: ubuntu-latest

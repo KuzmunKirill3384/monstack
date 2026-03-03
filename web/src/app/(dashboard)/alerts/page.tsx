@@ -3,6 +3,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useAlertsStream } from '@/hooks/useAlertsStream';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { Host } from '@/lib/api';
@@ -49,9 +50,12 @@ export default function AlertsPage() {
     });
   }, [hostFilter, statusFilter, fromFilter, toFilter]);
 
+  const refreshMs = typeof window !== 'undefined' ? Number(localStorage.getItem('monstack-refresh-ms')) || 5000 : 5000;
+  useAlertsStream(true);
   const { data: events, isLoading } = useQuery<AlertEvent[]>({
     queryKey: ['alerts', params],
     queryFn: () => api<AlertEvent[]>(params),
+    refetchInterval: refreshMs,
   });
 
   if (isLoading) return <p>Loading alerts...</p>;

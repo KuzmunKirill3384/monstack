@@ -2,10 +2,13 @@ package transport
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -23,12 +26,27 @@ type Client struct {
 	logger     *zap.Logger
 }
 
-func New(baseURL, token string, timeoutSec, retries int, logger *zap.Logger) *Client {
+func New(baseURL, token string, timeoutSec, retries int, insecureSkipVerify bool, caCertPath string, logger *zap.Logger) *Client {
 	if timeoutSec <= 0 {
 		timeoutSec = 30
 	}
 	if retries <= 0 {
 		retries = 3
+	}
+	tlsConfig := &tls.Config{InsecureSkipVerify: insecureSkipVerify}
+	if caCertPath != "" {
+		data, err := os.ReadFile(caCertPath)
+		if err != nil {
+			logger.Warn("failed to read CA cert, using system pool", zap.String("path", caCertPath), zap.Error(err))
+		} else {
+			pool := x509.NewCertPool()
+			if pool.AppendCertsFromPEM(data) {
+				tlsConfig.RootCAs = pool
+			}
+		}
+	}
+	tr := &http.Transport{
+		TLSClientConfig: tlsConfig,
 	}
 	return &Client{
 		baseURL: baseURL,
@@ -36,7 +54,8 @@ func New(baseURL, token string, timeoutSec, retries int, logger *zap.Logger) *Cl
 		timeout: time.Duration(timeoutSec) * time.Second,
 		retries: retries,
 		httpClient: &http.Client{
-			Timeout: time.Duration(timeoutSec) * time.Second,
+			Timeout:   time.Duration(timeoutSec) * time.Second,
+			Transport: tr,
 		},
 		logger: logger,
 	}

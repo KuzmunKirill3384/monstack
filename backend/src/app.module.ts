@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -8,6 +8,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { ProcessesModule } from './processes/processes.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { AppController } from './app.controller';
+import { TraceMiddleware } from './common/trace.middleware';
 
 @Module({
   imports: [
@@ -22,4 +23,8 @@ import { AppController } from './app.controller';
   ],
   controllers: [AppController],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TraceMiddleware).forRoutes('*');
+  }
+}

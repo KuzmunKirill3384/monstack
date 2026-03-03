@@ -70,16 +70,30 @@
 
 ### POST /auth/login
 
-**Body:** `{ "username": string, "password": string }`  
-**Response:** `200` + JWT в теле или в httpOnly cookie (в зависимости от реализации).
+**Body:** `{ "email": string, "password": string }`
+
+**Example request:**
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@test.com","password":"demo"}' \
+  -c cookies.txt
+```
+
+**Response:** `200` + тело `{ "access_token": "..." }` и cookie `access_token` (httpOnly). При ошибке: `401 Unauthorized`.
 
 ### GET /hosts
 
-Список хостов для текущего пользователя.
+Список хостов. При `AUTH_ENABLED=true` требуется cookie или заголовок `Authorization: Bearer <token>`.
 
 **Query:** опционально `?online=true|false` (фильтр по статусу).
 
-**Response:** массив `Host` с полями `id`, `name`, `os`, `arch`, `tags`, `created_at`, `last_seen_at`, `online` (вычисляемое).
+**Example:**
+```bash
+curl -b cookies.txt http://localhost:3000/hosts
+```
+
+**Response:** массив `Host` с полями `id`, `name`, `os`, `arch`, `tags`, `createdAt`, `lastSeenAt`, `online`, `lastMetric` (последняя точка метрик).
 
 ### GET /hosts/:id
 
@@ -100,7 +114,9 @@
 | to | да | ISO8601 (конец периода) |
 | resolution | нет | `raw` \| `1m` \| `5m` (по умолчанию `1m` для больших диапазонов) |
 
-**Response:** массив точек `{ ts, cpu_total_pct, load1, load5, load15, mem_used_mb, mem_total_mb, disk_used_pct, net_rx_bps, net_tx_bps }` и т.д.
+**Response:** массив точек `{ ts, cpu_total_pct, load1, load5, load15, mem_used_mb, mem_total_mb, disk_used_pct, net_rx_bps, net_tx_bps }`.
+
+**Ошибки:** `400 Bad Request` — отсутствует или невалиден `host`, `from`, `to` (ожидается ISO 8601); `from` позже `to`.
 
 ### GET /processes
 
@@ -116,6 +132,8 @@
 | limit | нет | Максимум записей (по умолчанию разумный лимит) |
 
 **Response:** массив `ProcSnapshot` (host_id, ts, pid, name, cpu_pct, rss_mb, io_read_bps, io_write_bps, state).
+
+**Ошибки:** `400 Bad Request` — отсутствует `host`; невалидные `from`/`to` (ISO 8601); `limit` вне диапазона 1–1000.
 
 ### GET /alerts
 
@@ -148,4 +166,8 @@
 
 ### GET /health
 
-Health check для балансировщика/оркестратора: `200 OK` при живой БД и приложении.
+Health check: `200 OK` + `{ "status": "ok" }` без проверки БД.
+
+### GET /ready
+
+Readiness: `200 OK` + `{ "status": "ok" }` при успешном запросе к БД. Используется в Docker healthcheck.

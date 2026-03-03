@@ -9,7 +9,7 @@
     "tui": "node tui.js",
     "simple": "node index.js",
     "watch": "node index.js --watch",
-    "test": "node utils.test.js"
+    "test": "node utils.test.js && node config.test.js && node api.test.js"
   },
   "dependencies": {
     "blessed": "^0.1.81",

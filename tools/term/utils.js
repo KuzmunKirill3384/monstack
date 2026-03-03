@@ -1,6 +1,3 @@
-/**
- * Вспомогательные функции: sparkline, сортировка, форматирование.
- */
 export const SORT_KEYS = ['cpu_pct', 'rss_mb', 'name', 'pid'];
 
 export function sortProcs(procs, sortBy, desc) {

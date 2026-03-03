@@ -6,6 +6,7 @@ import {
 } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import fastifyCookie from '@fastify/cookie';
 import fastifyRateLimit from '@fastify/rate-limit';
 import { AppModule } from './app.module';
 
@@ -17,6 +18,9 @@ async function bootstrap() {
     new FastifyAdapter({ bodyLimit: INGEST_BODY_LIMIT }),
     { bufferLogs: true },
   );
+  await app.register(fastifyCookie, {
+    secret: process.env.COOKIE_SECRET ?? 'monstack-cookie-secret',
+  });
   if (process.env.LOG_JSON === 'true') {
     app.useLogger(new JsonLogger());
   }
@@ -52,6 +56,10 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN ?? true,
+    credentials: true,
+  });
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
 }

@@ -1,6 +1,3 @@
-/**
- * API-клиент с retry, backoff и таймаутом.
- */
 import { config } from './config.js';
 
 async function fetchWithTimeout(url, opts = {}, timeoutMs = config.API_TIMEOUT_MS) {
@@ -80,6 +77,10 @@ export async function apiPatch(path, body, retries = 1) {
     }
   }
   throw lastErr;
+}
+
+export function getHosts() {
+  return apiGet('/hosts');
 }
 
 export function getMetrics(hostId, from, to) {

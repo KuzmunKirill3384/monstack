@@ -20,6 +20,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/monitoring
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
       AGENT_COMMAND_SECRET: ${AGENT_COMMAND_SECRET:-dev-secret}
       PORT: 3000
     ports:

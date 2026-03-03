@@ -1,28 +1,8 @@
 #!/usr/bin/env node
-const API_URL = process.env.API_URL || 'http://localhost:3000';
+import { config } from './config.js';
+import { getHosts, getMetrics, getProcesses } from './api.js';
+
 const WATCH_INTERVAL_MS = 10000;
-
-async function apiGet(path) {
-  const res = await globalThis.fetch(new URL(path, API_URL));
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-  return res.json();
-}
-
-async function getHosts() {
-  return apiGet('/hosts');
-}
-
-async function getMetrics(hostId, from, to, resolution = 'raw') {
-  const params = new URLSearchParams({ host: hostId, from: from.toISOString(), to: to.toISOString(), resolution });
-  return apiGet(`/metrics?${params}`);
-}
-
-async function getProcesses(hostId, limit = 10) {
-  const to = new Date();
-  const from = new Date(to.getTime() - 60000);
-  const params = new URLSearchParams({ host: hostId, from: from.toISOString(), to: to.toISOString(), limit: String(limit) });
-  return apiGet(`/processes?${params}`);
-}
 
 function formatTable(headers, rows) {
   const widths = headers.map((h, i) => Math.max(String(h).length, ...rows.map((r) => String(r[i] ?? '').length)));
@@ -42,13 +22,12 @@ function render(chalk, hosts, metricsByHost, processesByHost) {
     const status = h.online ? chalk.green('● online') : chalk.gray('○ offline');
     console.log(`  ${chalk.bold(h.name)}  ${status}  ${h.lastSeenAt ? new Date(h.lastSeenAt).toLocaleString() : '—'}`);
     const metrics = metricsByHost[h.id];
-    if (metrics && metrics.length) {
-      const last = metrics[metrics.length - 1];
-      const m = last;
+    if (metrics?.length) {
+      const m = metrics[metrics.length - 1];
       console.log(`    CPU ${m.cpu_total_pct.toFixed(1)}%  Load ${m.load1.toFixed(2)}  Mem ${m.mem_used_mb}/${m.mem_total_mb} MB  Disk ${m.disk_used_pct.toFixed(1)}%`);
     }
     const procs = processesByHost[h.id];
-    if (procs && procs.length) {
+    if (procs?.length) {
       console.log('    Top processes:');
       const header = ['PID', 'NAME', 'CPU%', 'RSS MB'];
       const rows = procs.slice(0, 5).map((p) => [p.pid, (p.name || '').slice(0, 20), p.cpu_pct.toFixed(1), p.rss_mb.toFixed(1)]);
@@ -56,7 +35,7 @@ function render(chalk, hosts, metricsByHost, processesByHost) {
     }
     console.log('');
   }
-  console.log(chalk.gray(` API: ${API_URL}  (--watch to refresh every ${WATCH_INTERVAL_MS / 1000}s)`));
+  console.log(chalk.gray(` API: ${config.API_URL}  (--watch to refresh every ${WATCH_INTERVAL_MS / 1000}s)`));
 }
 
 async function main() {

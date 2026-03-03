@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-/**
- * Monitoring TUI: Hosts | Processes | Metrics | Alerts | Rules.
- * Keys: 1-5 or F1-F5 screens, Enter select, / search, s sort, r refresh, q quit.
- */
 import { config } from './config.js';
 import { theme, FOOTERS } from './theme.js';
 import {

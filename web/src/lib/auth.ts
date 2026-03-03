@@ -1,12 +1,30 @@
-export function setToken(token: string) {
-  if (typeof window !== 'undefined') localStorage.setItem('access_token', token);
+export async function login(email: string, password: string): Promise<void> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'Login failed');
+  }
 }
 
-export function getToken(): string | null {
+export async function logout(): Promise<void> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+  await fetch(`${API_BASE}/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+}
+
+export async function getMe(): Promise<{ id: string; email: string } | null> {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('access_token');
-}
-
-export function clearToken() {
-  if (typeof window !== 'undefined') localStorage.removeItem('access_token');
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+  const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+  if (res.status === 401) return null;
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }

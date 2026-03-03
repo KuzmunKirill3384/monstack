@@ -1,11 +1,14 @@
 import { LoggerService } from '@nestjs/common';
+import { getTraceId } from './request-context';
 
 function format(level: string, message: string, context?: string) {
+  const traceId = getTraceId();
   return JSON.stringify({
     level,
     time: new Date().toISOString(),
     msg: message,
     ...(context && { context }),
+    ...(traceId && { trace_id: traceId }),
   });
 }
 

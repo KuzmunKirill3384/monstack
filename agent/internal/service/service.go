@@ -22,7 +22,7 @@ type Service struct {
 
 func New(cfg *config.Config, logger *zap.Logger) (*Service, error) {
 	sam := sampler.New(cfg, logger)
-	client := transport.New(cfg.ServerURL, cfg.HostToken, cfg.HTTPTimeoutSec, cfg.HTTPRetries, logger)
+	client := transport.New(cfg.ServerURL, cfg.HostToken, cfg.HTTPTimeoutSec, cfg.HTTPRetries, cfg.TLSInsecureSkipVerify, cfg.TLSCACert, logger)
 	svc := &Service{
 		cfg:       cfg,
 		logger:    logger,

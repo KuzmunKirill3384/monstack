@@ -1,7 +1,17 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt.guard';
 import { ProcessesService } from './processes.service';
+
+const MAX_LIMIT = 1000;
+
+function parseDate(param: string, name: string): Date {
+  const d = new Date(param);
+  if (Number.isNaN(d.getTime())) {
+    throw new BadRequestException(`Invalid ${name}: expected ISO 8601 date`);
+  }
+  return d;
+}
 
 @ApiTags('processes')
 @Controller('processes')
@@ -20,9 +30,18 @@ export class ProcessesController {
     @Query('to') to?: string,
     @Query('limit') limit?: string,
   ) {
-    const fromDate = from ? new Date(from) : undefined;
-    const toDate = to ? new Date(to) : undefined;
-    const lim = limit ? parseInt(limit, 10) : 500;
+    if (!hostId?.trim()) {
+      throw new BadRequestException('Query "host" is required');
+    }
+    const fromDate = from?.trim() ? parseDate(from, 'from') : undefined;
+    const toDate = to?.trim() ? parseDate(to, 'to') : undefined;
+    if (fromDate && toDate && fromDate.getTime() > toDate.getTime()) {
+      throw new BadRequestException('"from" must be before or equal to "to"');
+    }
+    const lim = limit !== undefined && limit !== '' ? parseInt(limit, 10) : 500;
+    if (Number.isNaN(lim) || lim < 1 || lim > MAX_LIMIT) {
+      throw new BadRequestException(`"limit" must be between 1 and ${MAX_LIMIT}`);
+    }
     return this.processes.findRange(hostId, fromDate, toDate, lim);
   }
 }

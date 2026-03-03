@@ -7,6 +7,7 @@ import { api, type Host } from '@/lib/api';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { HostSparkline } from '@/components/HostSparkline';
 
 export default function HostsPage() {
   const [search, setSearch] = React.useState('');
@@ -57,6 +58,9 @@ export default function HostsPage() {
                     CPU {m.cpu_total_pct.toFixed(1)}% · Mem {memPct}% · Load {m.load1.toFixed(2)}
                   </p>
                 )}
+                <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                  CPU <HostSparkline hostId={host.id} />
+                </p>
                 <p className="text-muted-foreground text-sm">
                   Last seen: {host.lastSeenAt ? new Date(host.lastSeenAt).toLocaleString() : 'Never'}
                 </p>
