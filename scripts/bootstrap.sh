@@ -4,24 +4,27 @@
 # или: git clone ... && cd monstack && ./scripts/bootstrap.sh
 
 set -e
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
-cd "$ROOT"
-# При запуске через curl | bash репозитория нет — клонируем в ./monstack
-if [[ ! -f "$ROOT/scripts/install.sh" ]]; then
-  echo "[bootstrap] Репозиторий не найден (запуск через curl | bash). Клонируем в ./monstack ..."
-  REPO_URL="https://github.com/KuzmunKirill3384/monstack.git"
-  if [[ -d "monstack" ]] && [[ -f "monstack/scripts/install.sh" ]]; then
-    cd monstack && ROOT="$(pwd)"
-  else
-    command -v git >/dev/null 2>&1 || { echo "[bootstrap] Нужен git: sudo apt install git"; exit 1; }
-    if [[ -d "monstack" ]]; then
-      cd monstack && git pull -q || true
-    else
-      git clone "$REPO_URL" monstack && cd monstack
-    fi
-    ROOT="$(pwd)"
-  fi
+REPO_URL="https://github.com/KuzmunKirill3384/monstack.git"
+
+# Определяем ROOT: при curl|bash — клонируем в $HOME/monstack (всегда есть права)
+if [[ -f "$(dirname "${BASH_SOURCE[0]}")/install.sh" ]] 2>/dev/null; then
+  ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   cd "$ROOT"
+elif [[ -f "$(dirname "$0")/install.sh" ]] 2>/dev/null; then
+  ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+  cd "$ROOT"
+else
+  INSTALL_DIR="${INSTALL_DIR:-$HOME/monstack}"
+  echo "[bootstrap] Репозиторий не найден (запуск через curl | bash). Клонируем в $INSTALL_DIR ..."
+  command -v git >/dev/null 2>&1 || { echo "[bootstrap] Нужен git: sudo apt install git"; exit 1; }
+  if [[ -d "$INSTALL_DIR" ]] && [[ -f "$INSTALL_DIR/scripts/install.sh" ]]; then
+    cd "$INSTALL_DIR" && git pull -q 2>/dev/null || true
+  else
+    mkdir -p "$(dirname "$INSTALL_DIR")"
+    git clone "$REPO_URL" "$INSTALL_DIR" || { echo "[bootstrap] Ошибка клонирования. Проверьте права на $(dirname "$INSTALL_DIR")"; exit 1; }
+    cd "$INSTALL_DIR"
+  fi
+  ROOT="$(pwd)"
 fi
 
 SKIP_DOCKER=false
@@ -219,19 +222,10 @@ fi
 
 echo ""
 echo "[bootstrap] Зависимости..."
-# Повторная проверка: при curl|bash ROOT мог быть неверным (нет репо)
 if [[ ! -f "$ROOT/scripts/install.sh" ]]; then
-  echo "[bootstrap] Репозиторий не найден. Клонируем в ./monstack ..."
-  REPO_URL="https://github.com/KuzmunKirill3384/monstack.git"
-  command -v git >/dev/null 2>&1 || { echo "[bootstrap] Установите git: sudo apt install git"; exit 1; }
-  if [[ -d "monstack" ]] && [[ -f "monstack/scripts/install.sh" ]]; then
-    cd monstack && ROOT="$(pwd)"
-  elif [[ -d "monstack" ]]; then
-    cd monstack && git pull -q 2>/dev/null || true && ROOT="$(pwd)"
-  else
-    git clone "$REPO_URL" monstack && cd monstack && ROOT="$(pwd)"
-  fi
-  cd "$ROOT"
+  echo "[bootstrap] Ошибка: $ROOT/scripts/install.sh не найден."
+  echo "[bootstrap] При curl|bash клонирование идёт в \$HOME/monstack. Проверьте предыдущий шаг."
+  exit 1
 fi
 if $TUI_ONLY; then
   bash "$ROOT/scripts/install.sh" --tui-only
@@ -269,6 +263,7 @@ fi
 
 echo ""
 echo "=== Готово ==="
+echo "  Репозиторий: $ROOT"
 echo "  Из корня репо (cd $ROOT):"
 if $TUI_ONLY; then
   echo "    make up      — поднять стек (Docker)"
