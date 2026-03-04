@@ -23,7 +23,11 @@ export class HostTokenGuard implements CanActivate {
     if (!host) {
       throw new UnauthorizedException('Invalid host token');
     }
-    (request as unknown as { host: { id: string } }).host = { id: host.id };
+    Object.defineProperty(request, 'host', {
+      value: { id: host.id },
+      writable: true,
+      configurable: true,
+    });
     return true;
   }
 }

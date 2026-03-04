@@ -29,8 +29,8 @@ async function bootstrap() {
       chunks.push(Buffer.from(chunk));
     }
     const decompressed = gunzipSync(Buffer.concat(chunks));
-    delete request.headers['content-encoding'];
     request.headers['content-length'] = String(decompressed.length);
+    delete request.headers['content-encoding'];
     return Readable.from(decompressed);
   });
   await app.register(fastifyCookie, {
