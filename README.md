@@ -6,6 +6,14 @@
 
 ## Установка (одна команда)
 
+**Bootstrap с нуля (Kali / Ubuntu / Debian / Mint / Fedora):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash
+```
+
+Или после клона: `./scripts/bootstrap.sh`. Флаги: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`. Подробнее: [docs/runbook.md](docs/runbook.md).
+
 ### Минимальный путь (Docker + Node)
 
 Для запуска **без Go** — только Docker и Node.js:
@@ -34,7 +42,7 @@ make up-one
 
 ### Устранение проблем
 
-При типичных сбоях (пустой список хостов, нет процессов, алерты не срабатывают, 401, Docker) см. [docs/runbook.md](docs/runbook.md).
+При типичных сбоях (пустой список хостов, нет процессов, алерты не срабатывают, 401, Docker) см. [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md). Краткий чеклист: [docs/runbook.md](docs/runbook.md).
 
 ---
 
@@ -80,6 +88,22 @@ make up-one
 | 2 | **Backend** | По токену находит хост (SHA256 токена = `token_hash` в БД). Проверяет `host_id` в теле. Пишет метрики в `metrics_raw`, снимки процессов в `proc_snapshots`, обновляет `host.last_seen_at`. |
 | 3 | **БД** | Хранит хосты, историю метрик, снимки процессов, правила алертов и события. Всё переживает перезапуск. |
 | 4 | **Web / TUI** | Запрашивают `GET /hosts`, `GET /metrics`, `GET /processes` и т.д. Строят графики (Recharts), таблицы процессов (сортировка, фильтр), список алертов. |
+
+### Чем Monstack отличается от Prometheus + Grafana?
+
+| | Monstack | Prometheus + Grafana |
+|---|---------|----------------------|
+| **Время до первого дашборда** | 60 секунд (`make up-one`) | 15–30 минут (prometheus.yml, exporters, datasource, дашборды) |
+| **Компоненты** | 1 стек: agent + backend + web + TUI | 4+ компонента: Prometheus, Grafana, node_exporter, alertmanager |
+| **Язык запросов** | Нет — готовые графики и алерты из коробки | PromQL (мощный, но требует изучения) |
+| **Целевая аудитория** | Небольшие команды, 1–50 хостов, быстрый старт | Инфраструктуры любого масштаба, DevOps-команды |
+| **Кастомные метрики** | Только OS-метрики (CPU, RAM, диск, сеть, процессы) | Любые метрики через exporters и client libraries |
+| **TUI** | Встроенный терминальный интерфейс (Node.js, C) | Нет (только веб) |
+| **Масштаб** | До 50 хостов на одном инстансе | Тысячи хостов, федерация, Thanos/Cortex |
+
+**Когда выбрать Monstack:** мониторинг нескольких серверов без настройки exporters, PromQL и дашбордов. Одна команда — и всё работает.
+
+**Когда выбрать Prometheus:** 100+ хостов, кастомные метрики приложений, multi-tenant, долгосрочное хранение с Thanos, alertmanager с маршрутизацией.
 
 ### Зачем база данных
 

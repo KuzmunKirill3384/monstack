@@ -1,0 +1,5 @@
+# Usage: docker compose -f docker-compose.yml -f docker-compose.timescale.yml up -d
+# Then run: ./scripts/enable-timescale.sh
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16

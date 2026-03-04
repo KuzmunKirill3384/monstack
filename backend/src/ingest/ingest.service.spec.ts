@@ -39,6 +39,7 @@ describe('IngestService', () => {
                 procSnapshot: {
                   createMany: jest.fn().mockResolvedValue({ count: 0 }),
                 },
+                host: { update: jest.fn().mockResolvedValue({}) },
               };
               return typeof fn === 'function' ? fn(tx) : Promise.resolve();
             }),
@@ -76,9 +77,19 @@ describe('IngestService', () => {
     ).rejects.toThrow('Invalid ts');
   });
 
-  it('calls prisma and updateLastSeen when valid', async () => {
+  it('calls prisma transaction with metrics, processes and host update', async () => {
     await service.ingest('host-1', validDto);
     expect(prisma.$transaction).toHaveBeenCalled();
-    expect(hosts.updateLastSeen).toHaveBeenCalledWith('host-1');
+    const tx = (prisma.$transaction as jest.Mock).mock.calls[0][0];
+    const txInstance = {
+      metricsRaw: { create: jest.fn().mockResolvedValue({}) },
+      procSnapshot: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      host: { update: jest.fn().mockResolvedValue({}) },
+    };
+    await tx(txInstance);
+    expect(txInstance.host.update).toHaveBeenCalledWith({
+      where: { id: 'host-1' },
+      data: { lastSeenAt: expect.any(Date) },
+    });
   });
 });

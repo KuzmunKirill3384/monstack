@@ -26,6 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scri
 
 | Документ | Описание |
 |----------|----------|
+| [Getting Started](GETTING_STARTED.md) | Пошаговая инструкция: мониторинг нескольких серверов, установка агентов, создание правил алертов |
 | [Демо-сценарий](demo-scenario.md) | Быстрый запуск стека, проверка готовности, первый хост и правило алерта |
 | [Деплой](deploy/README.md) | Примеры nginx, systemd; развёртывание в продакшене |
 
@@ -49,7 +50,8 @@ curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scri
 
 | Документ | Описание |
 |----------|----------|
-| [Runbook](runbook.md) | Диагностика: нет хостов, нет метрик, нет процессов, алерты не срабатывают, 401, Docker; как запускать тесты; CI |
+| [Troubleshooting](TROUBLESHOOTING.md) | Полное руководство по диагностике: Agent, Backend, Database, Web, TUI, Docker, CI |
+| [Runbook](runbook.md) | Краткий чеклист при сбоях: нет хостов, нет метрик, нет процессов, алерты не срабатывают, 401, Docker; тесты; CI |
 
 ### Компоненты и роли
 

@@ -280,6 +280,8 @@ async function runTui() {
     else if (mode === 'rules') renderRules();
   }
 
+  const MAX_METRICS_BUFFER = 100;
+
   async function refresh() {
     if (refreshAbort) {
       refreshAbort.abort();
@@ -288,6 +290,8 @@ async function runTui() {
     refreshAbort = controller;
     setLoading(true);
     lastError = null;
+    if (mode !== 'processes') processes = [];
+    if (mode !== 'metrics') metrics = null;
     render();
 
     try {
@@ -336,7 +340,10 @@ async function runTui() {
           getMetrics(host.id, from, to),
           mode === 'processes' ? getProcesses(host.id) : Promise.resolve([]),
         ]);
-        metrics = metricsData;
+        metrics =
+          metricsData.length > MAX_METRICS_BUFFER
+            ? metricsData.slice(-MAX_METRICS_BUFFER)
+            : metricsData;
         if (mode === 'processes') processes = procsData;
       }
 
@@ -379,7 +386,10 @@ async function runTui() {
         getMetrics(host.id, from, to),
         getProcesses(host.id),
       ]);
-      metrics = metricsData;
+      metrics =
+        metricsData.length > MAX_METRICS_BUFFER
+          ? metricsData.slice(-MAX_METRICS_BUFFER)
+          : metricsData;
       processes = procsData;
       lastError = null;
       render();

@@ -64,6 +64,23 @@ async function bootstrap() {
       { prefix: '/v1' },
     );
   }
+  const readRateLimitMax = parseInt(
+    process.env.READ_RATE_LIMIT_MAX ?? '300',
+    10,
+  );
+  const readRateLimitWindowMs = parseInt(
+    process.env.READ_RATE_LIMIT_WINDOW_MS ?? '60000',
+    10,
+  );
+  if (readRateLimitMax > 0 && readRateLimitWindowMs > 0) {
+    const fastifyInstance = app.getHttpAdapter().getInstance();
+    await fastifyInstance.register(fastifyRateLimit, {
+      max: readRateLimitMax,
+      timeWindow: readRateLimitWindowMs,
+      keyGenerator: (request) => request.ip ?? 'anonymous',
+      skipOnError: true,
+    });
+  }
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   const config = new DocumentBuilder()
     .setTitle('Monitoring API')

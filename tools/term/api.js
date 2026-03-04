@@ -21,8 +21,14 @@ export async function apiGet(path, retries = config.API_RETRIES) {
     try {
       const res = await fetchWithTimeout(url.toString());
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`${res.status} ${text}`);
+        let errMsg = '';
+        try {
+          const j = await res.clone().json();
+          errMsg = j.message || j.error || JSON.stringify(j);
+        } catch {
+          errMsg = await res.text();
+        }
+        throw new Error(`${res.status}: ${errMsg || res.statusText}`);
       }
       return res.json();
     } catch (e) {

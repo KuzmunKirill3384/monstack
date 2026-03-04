@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { AlertRule, Host } from '@prisma/client';
+import { AlertRule, Host, MetricsRaw } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { HostsService } from '../hosts/hosts.service';
 
@@ -10,6 +11,9 @@ const ONLINE_THRESHOLD_MS = 60_000;
 
 @Injectable()
 export class AlertsCronService {
+  private readonly logger = new Logger(AlertsCronService.name);
+  private isRunning = false;
+
   constructor(
     private prisma: PrismaService,
     private hosts: HostsService,
@@ -17,31 +21,97 @@ export class AlertsCronService {
 
   @Cron('*/2 * * * *')
   async checkAlerts() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    try {
+      await this.checkAlertsImpl();
+    } catch (err) {
+      this.logger.error('Alert check failed', (err as Error).stack);
+    } finally {
+      this.isRunning = false;
+    }
+  }
+
+  private async checkAlertsImpl() {
     const rules: AlertRuleWithHost[] = await this.prisma.alertRule.findMany({
       where: { enabled: true },
       include: { host: true },
     });
 
+    const thresholdRules = rules.filter(
+      (r) => r.metric !== 'host_down' && r.threshold != null,
+    );
+    const latestByHost = thresholdRules.length
+      ? await this.fetchLatestMetricsByHost()
+      : new Map<string, MetricsRaw>();
+
+    const ruleIds = rules.map((r) => r.id);
+    const latestEvents = ruleIds.length
+      ? await this.fetchLatestEvents(ruleIds)
+      : new Map<string, string>();
+
     for (const rule of rules) {
       if (rule.metric === 'host_down') {
-        await this.checkHostDown(rule);
+        await this.checkHostDown(rule, latestEvents);
       } else {
-        await this.checkThreshold(rule);
+        await this.checkThreshold(rule, latestByHost, latestEvents);
       }
     }
   }
 
-  private async checkHostDown(rule: AlertRuleWithHost) {
+  private async fetchLatestMetricsByHost(): Promise<Map<string, MetricsRaw>> {
+    const rows = await this.prisma.$queryRaw<MetricsRaw[]>(
+      Prisma.sql`
+        SELECT DISTINCT ON (host_id)
+          id, ts, host_id AS "hostId",
+          cpu_total_pct AS "cpuTotalPct",
+          load1, load5, load15,
+          mem_used_mb AS "memUsedMb", mem_total_mb AS "memTotalMb",
+          disk_used_pct AS "diskUsedPct",
+          net_rx_bps AS "netRxBps", net_tx_bps AS "netTxBps"
+        FROM metrics_raw
+        ORDER BY host_id, ts DESC
+      `,
+    );
+    const map = new Map<string, MetricsRaw>();
+    for (const row of rows) {
+      map.set(row.hostId, row);
+    }
+    return map;
+  }
+
+  private async fetchLatestEvents(
+    ruleIds: string[],
+  ): Promise<Map<string, string>> {
+    const events = await this.prisma.$queryRaw<
+      { rule_id: string; host_id: string; status: string }[]
+    >(
+      Prisma.sql`
+        SELECT DISTINCT ON (rule_id, host_id)
+          rule_id, host_id, status
+        FROM alert_events
+        WHERE rule_id = ANY(${ruleIds}::uuid[])
+        ORDER BY rule_id, host_id, ts DESC
+      `,
+    );
+    const map = new Map<string, string>();
+    for (const e of events) {
+      map.set(`${e.rule_id}:${e.host_id}`, e.status);
+    }
+    return map;
+  }
+
+  private async checkHostDown(
+    rule: AlertRuleWithHost,
+    latestEvents: Map<string, string>,
+  ) {
     if (!rule.hostId) return;
     const host = await this.hosts.findOne(rule.hostId);
     if (!host) return;
     const lastSeen = host.lastSeenAt ? new Date(host.lastSeenAt).getTime() : 0;
     const isDown = Date.now() - lastSeen > ONLINE_THRESHOLD_MS;
-    const existing = await this.prisma.alertEvent.findFirst({
-      where: { ruleId: rule.id, hostId: rule.hostId },
-      orderBy: { ts: 'desc' },
-    });
-    const currentFiring = existing?.status === 'firing';
+    const currentFiring =
+      latestEvents.get(`${rule.id}:${rule.hostId}`) === 'firing';
     if (isDown && !currentFiring) {
       await this.prisma.alertEvent.create({
         data: {
@@ -65,19 +135,18 @@ export class AlertsCronService {
     }
   }
 
-  private async checkThreshold(rule: AlertRuleWithHost) {
+  private async checkThreshold(
+    rule: AlertRuleWithHost,
+    latestByHost: Map<string, MetricsRaw>,
+    latestEvents: Map<string, string>,
+  ) {
     if (rule.threshold == null) return;
     const hostIds = rule.hostId
       ? [rule.hostId]
-      : (await this.prisma.host.findMany({ select: { id: true } })).map(
-          (h) => h.id,
-        );
+      : [...latestByHost.keys()];
 
     for (const hostId of hostIds) {
-      const latest = await this.prisma.metricsRaw.findFirst({
-        where: { hostId },
-        orderBy: { ts: 'desc' },
-      });
+      const latest = latestByHost.get(hostId);
       if (!latest) continue;
 
       let value: number;
@@ -107,11 +176,8 @@ export class AlertsCronService {
               ? value === rule.threshold
               : false;
 
-      const existing = await this.prisma.alertEvent.findFirst({
-        where: { ruleId: rule.id, hostId },
-        orderBy: { ts: 'desc' },
-      });
-      const currentFiring = existing?.status === 'firing';
+      const currentFiring =
+        latestEvents.get(`${rule.id}:${hostId}`) === 'firing';
 
       if (firing && !currentFiring) {
         await this.prisma.alertEvent.create({
@@ -120,7 +186,7 @@ export class AlertsCronService {
             ruleId: rule.id,
             ts: new Date(),
             status: 'firing',
-            message: `${rule.metric} ${rule.op} ${rule.threshold} (current: ${value})`,
+            message: `${rule.metric} ${rule.op} ${rule.threshold} (current: ${value.toFixed(1)})`,
           },
         });
       } else if (!firing && currentFiring) {

@@ -149,12 +149,108 @@ curl -b cookies.txt http://localhost:3000/hosts
 
 **Response:** список правил и/или событий (формат уточняется в реализации).
 
-### CRUD /alert-rules (этап 5)
+### CRUD /alert-rules
 
-- `GET /alert-rules` — список правил (с фильтром по host_id).
-- `POST /alert-rules` — создание правила.
-- `PATCH /alert-rules/:id` — обновление (например enabled, threshold).
-- `DELETE /alert-rules/:id` — удаление.
+#### GET /alert-rules
+
+Список правил. Опционально `?host=<uuid>` для фильтрации по хосту.
+
+#### POST /alert-rules
+
+Создание правила.
+
+**Body schema:**
+
+| Поле | Тип | Обязательное | Описание |
+|------|-----|:---:|----------|
+| hostId | string (uuid) \| null | нет | Хост или null = глобальное правило |
+| metric | string | да | `cpu_total_pct`, `mem_used_pct`, `disk_used_pct`, `host_down` |
+| op | string | да | `>`, `<`, `==` |
+| threshold | number | да | Пороговое значение (%) |
+| window | string | нет | Окно проверки, по умолчанию `5m` |
+| severity | string | нет | `critical`, `warning`, `info` (по умолчанию `warning`) |
+| enabled | boolean | нет | По умолчанию `true` |
+
+**Примеры:**
+
+CPU > 90% на всех хостах:
+
+```bash
+curl -X POST http://localhost:3000/alert-rules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metric": "cpu_total_pct",
+    "op": ">",
+    "threshold": 90,
+    "severity": "critical",
+    "enabled": true
+  }'
+```
+
+Память > 80% на конкретном хосте:
+
+```bash
+curl -X POST http://localhost:3000/alert-rules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hostId": "a0000000-0000-0000-0000-000000000001",
+    "metric": "mem_used_pct",
+    "op": ">",
+    "threshold": 80,
+    "severity": "warning"
+  }'
+```
+
+Диск > 95%:
+
+```bash
+curl -X POST http://localhost:3000/alert-rules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metric": "disk_used_pct",
+    "op": ">",
+    "threshold": 95,
+    "severity": "critical"
+  }'
+```
+
+Host down (агент не шлёт данные):
+
+```bash
+curl -X POST http://localhost:3000/alert-rules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hostId": "a0000000-0000-0000-0000-000000000001",
+    "metric": "host_down",
+    "op": ">",
+    "threshold": 0,
+    "severity": "critical"
+  }'
+```
+
+**Response:** `201 Created` + объект правила с `id`.
+
+#### PATCH /alert-rules/:id
+
+Обновление правила. Передаются только изменяемые поля.
+
+```bash
+curl -X PATCH http://localhost:3000/alert-rules/RULE_ID \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+```
+
+```bash
+curl -X PATCH http://localhost:3000/alert-rules/RULE_ID \
+  -H "Content-Type: application/json" \
+  -d '{"threshold": 85, "severity": "critical"}'
+```
+
+#### DELETE /alert-rules/:id
+
+```bash
+curl -X DELETE http://localhost:3000/alert-rules/RULE_ID
+```
 
 ---
 

@@ -83,8 +83,20 @@ static int fetch_url(const char *path, char **out) {
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, out);
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
   CURLcode res = curl_easy_perform(curl);
+  long http_code = 0;
+  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
   curl_easy_cleanup(curl);
-  if (res != CURLE_OK || !*out) return -1;
+  if (res != CURLE_OK) {
+    free(*out);
+    *out = NULL;
+    return -1;
+  }
+  if (http_code < 200 || http_code >= 300) {
+    free(*out);
+    *out = NULL;
+    return -1;
+  }
+  if (!*out || !**out) return -1;
   return 0;
 }
 
@@ -155,8 +167,10 @@ static int check_backend(void) {
 static int fetch_hosts_list(void) {
   char *json = NULL;
   if (fetch_url("/hosts", &json) != 0) { free(json); return -1; }
+  if (!json) { free(json); return -1; }
   const char *p = strchr(json, '[');
   if (!p) { free(json); return -1; }
+  memset(hosts, 0, sizeof(hosts));
   nhosts = 0;
   for (;;) {
     p = strchr(p, '{');
@@ -193,8 +207,10 @@ static int fetch_processes(void) {
            host_id, from_buf, to_buf, MAX_PROCS);
   char *json = NULL;
   if (fetch_url(path, &json) != 0) { free(json); return -1; }
+  if (!json) return -1;
   const char *p = strchr(json, '[');
   if (!p) { free(json); return -1; }
+  memset(procs, 0, sizeof(procs));
   nprocs = 0;
   for (;;) {
     p = strchr(p, '{');
@@ -252,8 +268,10 @@ static int fetch_alerts(void) {
   snprintf(path, sizeof(path), "/alerts?from=%s&to=%s", from_buf, to_buf);
   char *json = NULL;
   if (fetch_url(path, &json) != 0) { free(json); return -1; }
+  if (!json) return -1;
   const char *p = strchr(json, '[');
   if (!p) { free(json); return -1; }
+  memset(alerts, 0, sizeof(alerts));
   nalerts = 0;
   for (;;) {
     p = strchr(p, '{');

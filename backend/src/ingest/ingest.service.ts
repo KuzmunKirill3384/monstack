@@ -10,7 +10,11 @@ export class IngestService {
     private hosts: HostsService,
   ) {}
 
-  async ingest(hostId: string, dto: IngestBatchDto) {
+  private invalidateHostsCache() {
+    this.hosts.invalidateCache();
+  }
+
+  async ingest(hostId: string, dto: IngestBatchDto, agentUrl?: string) {
     if (dto.host_id !== hostId) {
       throw new BadRequestException('host_id does not match token');
     }
@@ -52,8 +56,17 @@ export class IngestService {
           })),
         });
       }
+      const hostUpdate: { lastSeenAt: Date; agentUrl?: string } = {
+        lastSeenAt: ts,
+      };
+      if (agentUrl) {
+        hostUpdate.agentUrl = agentUrl;
+      }
+      await tx.host.update({
+        where: { id: hostId },
+        data: hostUpdate,
+      });
     });
-
-    await this.hosts.updateLastSeen(hostId);
+    this.invalidateHostsCache();
   }
 }

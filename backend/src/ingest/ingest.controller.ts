@@ -16,6 +16,8 @@ export class IngestController {
     @Req() req: FastifyRequest & { host: { id: string } },
     @Body() dto: IngestBatchDto,
   ) {
-    await this.ingestService.ingest(req.host.id, dto);
+    const agentUrl =
+      (req.headers['x-agent-url'] as string | undefined) ?? undefined;
+    await this.ingestService.ingest(req.host.id, dto, agentUrl);
   }
 }

@@ -18,6 +18,9 @@ describe('AppController (e2e)', () => {
         $queryRaw: jest.fn().mockResolvedValue([{ 1: 1 }]),
         $connect: jest.fn(),
         $disconnect: jest.fn(),
+        host: {
+          findMany: jest.fn().mockResolvedValue([]),
+        },
       })
       .compile();
 
@@ -32,10 +35,16 @@ describe('AppController (e2e)', () => {
     await app?.close();
   });
 
-  it('GET /health returns ok', async () => {
+  it('GET /health returns ok with components', async () => {
     const res = await app.inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.payload)).toEqual({ status: 'ok' });
+    const body = JSON.parse(res.payload);
+    expect(body.status).toBe('ok');
+    expect(body).toHaveProperty('uptime');
+    expect(body).toHaveProperty('components');
+    expect(body.components).toHaveProperty('database', 'ok');
+    expect(body.components.agents).toHaveProperty('total');
+    expect(body.components.agents).toHaveProperty('online');
   });
 
   it('GET /ready returns ok when DB is up', async () => {

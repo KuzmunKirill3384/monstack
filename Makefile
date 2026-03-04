@@ -7,7 +7,7 @@
 
 .PHONY: install install-all install-backend install-web install-term install-term-c install-console link term-global \
         up down logs term term-c localterm webterm check check-deps term-check test clean help diagrams bootstrap \
-        cli-build cli-install up-one install-docker-only
+        cli-build cli-install up-one install-docker-only load-test chaos-test
 
 SHELL := /bin/bash
 COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
@@ -153,3 +153,14 @@ up-one: cli-build
 
 cli-install: cli-build
 	@echo "Run: make up-one   or   ./bin/monstack-cli up"
+
+load-test:
+	@command -v k6 >/dev/null 2>&1 || (echo "k6 not found. Install: https://k6.io/docs/getting-started/installation/"; exit 1)
+	@echo ">> Running ingest load test (2 min)..."
+	k6 run tests/load/ingest-load.js
+	@echo ">> Running read load test (2 min)..."
+	k6 run tests/load/read-load.js
+
+chaos-test:
+	@echo ">> Running chaos tests..."
+	@bash tests/chaos/run-chaos.sh

@@ -4,7 +4,9 @@ import {
   IsArray,
   IsNumber,
   IsOptional,
+  IsPositive,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -50,6 +52,7 @@ export class IngestMetricsDto {
 export class IngestProcessDto {
   @ApiProperty()
   @IsNumber()
+  @IsPositive()
   pid!: number;
 
   @ApiProperty()
@@ -58,20 +61,24 @@ export class IngestProcessDto {
 
   @ApiProperty()
   @IsNumber()
+  @Min(0)
   cpu_pct!: number;
 
   @ApiProperty()
   @IsNumber()
+  @Min(0)
   rss_mb!: number;
 
   @ApiProperty()
   @IsOptional()
   @IsNumber()
+  @Min(0)
   io_read_bps?: number;
 
   @ApiProperty()
   @IsOptional()
   @IsNumber()
+  @Min(0)
   io_write_bps?: number;
 
   @ApiProperty()

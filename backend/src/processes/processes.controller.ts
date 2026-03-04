@@ -30,11 +30,13 @@ export class ProcessesController {
   @ApiQuery({ name: 'from', required: false })
   @ApiQuery({ name: 'to', required: false })
   @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor (last seen id) for pagination' })
   list(
     @Query('host') hostId: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
   ) {
     if (!hostId?.trim()) {
       throw new BadRequestException('Query "host" is required');
@@ -50,6 +52,7 @@ export class ProcessesController {
         `"limit" must be between 1 and ${MAX_LIMIT}`,
       );
     }
-    return this.processes.findRange(hostId, fromDate, toDate, lim);
+    const cursorId = cursor?.trim() || undefined;
+    return this.processes.findRange(hostId, fromDate, toDate, lim, cursorId);
   }
 }

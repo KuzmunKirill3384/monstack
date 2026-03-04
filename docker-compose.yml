@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     command: postgres -c shared_buffers=128MB -c work_mem=4MB -c max_connections=30
     environment:
       POSTGRES_USER: postgres
@@ -19,6 +20,7 @@ services:
 
   backend:
     build: ./backend
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/monitoring
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
@@ -41,6 +43,7 @@ services:
 
   web:
     build: ./web
+    restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3000
     ports:
@@ -53,6 +56,7 @@ services:
     build: ./agent
     pid: host
     mem_limit: 64m
+    restart: unless-stopped
     environment:
       SERVER_URL: http://backend:3000
       HOST_ID: a0000000-0000-0000-0000-000000000001
