@@ -28,7 +28,10 @@ async function bootstrap() {
     for await (const chunk of payload) {
       chunks.push(Buffer.from(chunk));
     }
-    return Readable.from(gunzipSync(Buffer.concat(chunks)));
+    const decompressed = gunzipSync(Buffer.concat(chunks));
+    delete request.headers['content-encoding'];
+    request.headers['content-length'] = String(decompressed.length);
+    return Readable.from(decompressed);
   });
   await app.register(fastifyCookie, {
     secret: process.env.COOKIE_SECRET ?? 'monstack-cookie-secret',
