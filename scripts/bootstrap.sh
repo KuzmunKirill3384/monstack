@@ -12,6 +12,7 @@ SKIP_NODE=false
 SKIP_UP=false
 DEV=false
 YES=false
+TUI_ONLY=false
 
 for arg in "$@"; do
   case "$arg" in
@@ -20,6 +21,7 @@ for arg in "$@"; do
     --skip-node) SKIP_NODE=true ;;
     --skip-up) SKIP_UP=true ;;
     --dev) DEV=true ;;
+    --tui-only) TUI_ONLY=true; SKIP_NODE=true ;;
   esac
 done
 
@@ -89,7 +91,8 @@ install_docker_debian() {
         maybe_sudo systemctl start docker 2>/dev/null || true
         maybe_sudo systemctl enable docker 2>/dev/null || true
       fi
-      echo "[bootstrap] Выполните: newgrp docker   или перелогиньтесь, затем снова: make up"
+      echo "[bootstrap] Выполните: newgrp docker   или перелогиньтесь."
+      echo "[bootstrap] Затем из корня репо: cd $ROOT && make up"
       return 0
     fi
     return 0
@@ -108,7 +111,8 @@ install_docker_debian() {
     maybe_sudo apt-get install -y docker.io docker-compose
   fi
   if ! docker info >/dev/null 2>&1 && ! maybe_sudo docker info >/dev/null 2>&1; then
-    echo "[bootstrap] После установки выполните: newgrp docker   или перезайдите в систему, затем make up"
+    echo "[bootstrap] После установки: newgrp docker   или перезайдите в систему."
+    echo "[bootstrap] Затем из корня репо: cd $ROOT && make up"
   fi
 }
 
@@ -184,14 +188,25 @@ else
   fi
 fi
 
-if ! command -v node >/dev/null 2>&1; then
-  echo "[bootstrap] Ошибка: Node.js не найден. Установите Node.js 18+ и повторите."
-  exit 1
+if $TUI_ONLY; then
+  echo "[bootstrap] Режим: только консоль (TUI). Backend/web не ставятся."
+  if ! command -v node >/dev/null 2>&1; then
+    echo "[bootstrap] Node не установлен — соберём только C TUI (term-c)."
+  fi
+else
+  if ! command -v node >/dev/null 2>&1; then
+    echo "[bootstrap] Ошибка: Node.js не найден. Установите Node.js 18+ и повторите."
+    exit 1
+  fi
 fi
 
 echo ""
-echo "[bootstrap] npm-зависимости..."
-bash "$ROOT/scripts/install.sh"
+echo "[bootstrap] Зависимости..."
+if $TUI_ONLY; then
+  bash "$ROOT/scripts/install.sh" --tui-only
+else
+  bash "$ROOT/scripts/install.sh"
+fi
 echo ""
 
 if ! $SKIP_UP; then
@@ -201,10 +216,11 @@ if ! $SKIP_UP; then
       echo "[bootstrap] Запуск стека: $COMPOSE up -d"
       $COMPOSE up -d --build 2>/dev/null || maybe_sudo $COMPOSE up -d --build
     else
-      echo "[bootstrap] Docker недоступен без sudo. Выполните: newgrp docker   затем: make up"
+      echo "[bootstrap] Docker недоступен без sudo. Выполните: newgrp docker"
+    echo "[bootstrap] Затем из корня репо: cd $ROOT && make up"
     fi
   else
-    echo "[bootstrap] docker compose не найден. Установите Docker Compose и выполните: make up"
+    echo "[bootstrap] docker compose не найден. Установите Docker Compose. Затем из корня репо: cd $ROOT && make up"
   fi
 fi
 
@@ -222,8 +238,13 @@ fi
 
 echo ""
 echo "=== Готово ==="
-echo "  make localterm   — TUI (из корня репо)"
-echo "  make webterm     — открыть веб"
-echo "  make up / make down — стек"
+echo "  Из корня репо (cd $ROOT):"
+if $TUI_ONLY; then
+  echo "    make up      — поднять стек (Docker)"
+  echo "    make term-c  — консольный TUI (C, без Node)"
+  echo "    make localterm — Node TUI (если установлен Node)"
+else
+  echo "    make up   make localterm   make webterm   make down"
+fi
 echo "  Backend: http://localhost:3000   Web: http://localhost:3001"
 echo "  Документация: docs/README.md"

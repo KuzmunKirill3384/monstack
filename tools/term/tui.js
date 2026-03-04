@@ -159,7 +159,14 @@ async function runTui() {
       ['PID', 'NAME', 'CPU%', 'RSS', 'STATE'],
       ...sorted.map(formatProcRow),
     ];
-    table.setData(rows.length > 1 ? rows : [['(no processes)']]);
+    const emptyRows =
+      rows.length <= 1
+        ? [
+            ['(no processes)', '', '', '', ''],
+            ['Tip: make up-full, wait 30s, press r', '', '', '', ''],
+          ]
+        : [];
+    table.setData(rows.length > 1 ? rows : [rows[0], ...emptyRows]);
     setHeaderText(
       '',
       `Processes: ${sorted.length}${filterStr ? ` (filter: "${filterStr}")` : ''}  Sort: ${sortBy} ${sortDesc ? '↓' : '↑'}`

@@ -5,8 +5,9 @@
 # make term    — запустить Node TUI
 # make term-c  — собрать и запустить C TUI (если есть ncurses и curl)
 
-.PHONY: install install-all install-backend install-web install-term install-term-c link \
-        up up-full down logs term term-c localterm webterm check check-deps term-check test clean help diagrams bootstrap
+.PHONY: install install-all install-backend install-web install-term install-term-c install-console link \
+        up up-full down logs term term-c localterm webterm check check-deps term-check test clean help diagrams bootstrap \
+        cli-build cli-install
 
 SHELL := /bin/bash
 COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
@@ -22,7 +23,8 @@ help:
 	@echo ""
 	@echo "  make bootstrap   — one-shot: зависимости + make up + check (Ubuntu/Debian/Kali/macOS)"
 	@echo "  make install-all — полная установка (Node, Docker, Make, ncurses, npm) — Ubuntu/Debian/Kali/macOS"
-	@echo "  make install     — установить зависимости + npm link (localterm, webterm)"
+	@echo "  make install         — установить все зависимости (backend, web, term)"
+	@echo "  make install-console — только TUI: term + term-c (без backend/web, стек через Docker)"
 	@echo "  make up          — запустить стек (postgres, backend, web)"
 	@echo "  make up-full     — + agent (сбор метрик с контейнера)"
 	@echo "  make down        — остановить контейнеры"
@@ -37,6 +39,7 @@ help:
 	@echo "  make test        — все тесты (backend, web, term)"
 	@echo "  make clean       — удалить node_modules и сборки"
 	@echo "  make diagrams    — сгенерировать PNG из docs/diagrams/*.puml (Docker)"
+	@echo "  make cli-build    — собрать monstack-cli (Go)"
 	@echo ""
 	@echo "Клавиши TUI: 1-5|F1-F5 экраны  Enter выбор  s сортировка  f фильтр  r обновить  q выход"
 	@echo ""
@@ -72,6 +75,12 @@ install-term:
 install-term-c:
 	@echo ">> tools/term-c: make..."
 	@cd tools/term-c && make 2>/dev/null || (echo "Нужны: gcc, ncurses, libcurl. Ubuntu: sudo apt install build-essential libncurses-dev libcurl4-openssl-dev; macOS: brew install ncurses curl" && exit 1)
+
+install-console:
+	@echo ">> Установка только консольного TUI (без backend/web)..."
+	@$(MAKE) install-term-c
+	@$(MAKE) install-term
+	@echo "Готово. Стек через Docker: make up. Затем: make term-c (C) или make localterm (Node)."
 
 up:
 	@command -v docker >/dev/null 2>&1 || (echo "Установите Docker: https://docs.docker.com/engine/install/"; exit 1)
@@ -128,3 +137,9 @@ clean:
 	rm -rf backend/node_modules web/node_modules tools/term/node_modules
 	rm -f tools/term-c/monterm
 	@echo "clean OK"
+
+cli-build:
+	@cd monstack-cli && go build -o monstack-cli . && mv monstack-cli .. && echo "Built ./monstack-cli"
+
+cli-install: cli-build
+	@echo "Run from repo root: ./monstack-cli install --dir . && ./monstack-cli start --with-agent"

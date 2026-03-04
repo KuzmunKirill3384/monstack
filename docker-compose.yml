@@ -48,6 +48,7 @@ services:
     profiles:
       - agent
     build: ./agent
+    pid: host
     environment:
       SERVER_URL: http://backend:3000
       HOST_ID: a0000000-0000-0000-0000-000000000001

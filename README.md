@@ -22,7 +22,35 @@ cd ~/projects/monstack
 
 Скрипт ставит зависимости (Docker, Node.js, Make, ncurses), npm-пакеты, поднимает стек и проверяет готовность. Дальше: `make localterm` (TUI) или откройте http://localhost:3001.
 
-Флаги: `--yes` (без вопросов), `--skip-docker`, `--skip-node`, `--skip-up` (только deps).
+Флаги: `--yes` (без вопросов), `--skip-docker`, `--skip-node`, `--skip-up` (только deps), **`--tui-only`** (только консольный TUI, без backend/web — быстрее).
+
+### Только консоль (ускоренная установка)
+
+Если нужен только терминальный клиент, без установки Node и сотен npm-пакетов:
+
+1. **Вариант A: C TUI (самый быстрый)** — без Node. Стек в Docker, клиент — один бинарник.
+   ```bash
+   git clone https://github.com/KuzmunKirill3384/monstack.git ~/projects/monstack && cd ~/projects/monstack
+   ./scripts/bootstrap.sh --tui-only   # Docker + системные пакеты + сборка term-c (gcc, ncurses, curl)
+   # затем: newgrp docker (если нужно), cd ~/projects/monstack, make up && make term-c
+   ```
+2. **Вариант B: из корня репо** — стек уже поднят (Docker), ставите только TUI:
+   ```bash
+   make install-console   # только tools/term + tools/term-c, без backend/web
+   make term-c            # или make localterm (Node)
+   ```
+
+### Установка через CLI (Go)
+
+Единый бинарник для установки и управления стеком (генерация `.env`, запуск Docker Compose):
+
+```bash
+make cli-build
+./monstack-cli install --dir .
+./monstack-cli start --dir . --build --with-agent
+```
+
+Команды: `install`, `start`, `stop`, `status`, `upgrade`, `uninstall`. Подробнее: [monstack-cli/README.md](monstack-cli/README.md).
 
 ---
 
@@ -92,9 +120,11 @@ cd ~/projects/monstack
 ### Быстрый старт
 
 ```bash
-make install    # зависимости backend, web, tools/term
+make install    # все зависимости (backend, web, term)
 make up         # поднять стек (postgres, backend, web)
 ```
+
+Только консоль (без backend/web): **`make install-console`** затем `make up` и `make term-c` или `make localterm`.
 
 Запуск TUI и веба **из корня репо** (npm link не нужен):
 
@@ -110,7 +140,8 @@ make webterm     # или  npm run webterm     — Docker + открыть бр�
 | Команда | Действие |
 |--------|----------|
 | **`make bootstrap`** | One-shot: зависимости, make up, проверка (аналог curl \| bash bootstrap.sh). |
-| **`make localterm`** / **`npm run localterm`** | Терминальный TUI: баннер, затем htop-like. Нужен backend: `make up`. |
+| **`make install-console`** | Только TUI: term + term-c (без backend/web). Стек через `make up`. |
+| **`make localterm`** / **`npm run localterm`** | Терминальный TUI (хосты, процессы, метрики, алерты). Backend: `make up`. Для процессов: **`make up-full`**. |
 | **`make webterm`** / **`npm run webterm`** | Поднять Docker, через 3 с открыть в браузере http://localhost:3001. |
 | **`make up`** | Запустить весь стек в Docker (postgres, backend, web, agent). |
 | **`make down`** | Остановить контейнеры. |
@@ -323,10 +354,10 @@ docker compose exec postgres psql -U postgres -d monitoring -c "INSERT INTO \"Ho
 - **Проверить:** `docker compose ps` — контейнер agent в состоянии Up; `docker compose logs agent` — нет ли ошибок ingest (connection refused, 401, 413).
 - **Решение:** Убедиться, что backend здоров: `curl -s http://localhost:3000/ready`. Подождать 10–30 с после старта; проверить `SERVER_URL` и `HOST_TOKEN` у агента (токен должен совпадать с записью в БД по `token_hash`).
 
-### Пустой список процессов
+### Пустой список процессов (в TUI или вебе)
 
-- **Причина:** Агент шлёт процессы раз в ~30 с; за последние 2 минуты по хосту может не быть снимков.
-- **Решение:** Подождать до 1 минуты; проверить, что хост online (зелёный индикатор). Если хост online, но процессов нет — посмотреть логи агента (ошибки сбора процессов).
+- **Частая причина:** Агент по умолчанию **не** запускается при `make up`. Для снимков процессов нужен стек с агентом: **`make up-full`** (или `docker compose --profile agent up -d`). Затем подождать 30–60 с и обновить экран (в TUI — клавиша **r**).
+- **Иначе:** Агент шлёт процессы раз в ~30 с. Убедиться, что хост online (зелёный индикатор). Если хост online, но процессов нет — смотреть логи: `docker compose --profile agent logs agent`.
 
 ### Пустые алерты / алерты не срабатывают
 

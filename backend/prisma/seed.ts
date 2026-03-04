@@ -12,8 +12,8 @@ const DEFAULT_HOST_ID = 'a0000000-0000-0000-0000-000000000001';
 const DEFAULT_HOST_TOKEN = 'local-dev-token';
 
 async function main() {
-  const email = 'demo@test.com';
-  const password = 'demo';
+  const email = process.env.ADMIN_EMAIL ?? 'demo@test.com';
+  const password = process.env.ADMIN_PASSWORD ?? 'demo';
   const passwordHash = hashPassword(password);
 
   await prisma.user.upsert({
@@ -39,7 +39,7 @@ async function main() {
     },
   });
 
-  console.log('Seed done: user demo@test.com, host "local" (token: local-dev-token)');
+  console.log('Seed done: user', email, ', host "local" (token: local-dev-token)');
 }
 
 main()
