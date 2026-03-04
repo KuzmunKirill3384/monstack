@@ -1,10 +1,12 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
 	"syscall"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -21,11 +23,12 @@ var signalMap = map[string]syscall.Signal{
 	"SIGHUP":  syscall.SIGHUP,
 }
 
-func Run(listenAddr, secret string, logger *zap.Logger) error {
+func Run(ctx context.Context, listenAddr, secret string, logger *zap.Logger) error {
 	if secret == "" {
 		logger.Info("command server disabled: no secret configured")
 		return nil
 	}
+	selfPID := os.Getpid()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/signal", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -55,6 +58,10 @@ func Run(listenAddr, secret string, logger *zap.Logger) error {
 			http.Error(w, "refusing to signal init", http.StatusForbidden)
 			return
 		}
+		if req.PID == selfPID {
+			http.Error(w, "refusing to signal self", http.StatusForbidden)
+			return
+		}
 		if err := syscall.Kill(req.PID, sig); err != nil {
 			logger.Warn("kill failed", zap.Int("pid", req.PID), zap.String("signal", req.Signal), zap.Error(err))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -74,18 +81,28 @@ func Run(listenAddr, secret string, logger *zap.Logger) error {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+	srv := &http.Server{Addr: listenAddr, Handler: mux}
+	go func() {
+		<-ctx.Done()
+		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutCtx)
+	}()
 	logger.Info("command server listening", zap.String("addr", listenAddr))
-	return http.ListenAndServe(listenAddr, mux)
+	if err := srv.ListenAndServe(); err == http.ErrServerClosed {
+		return nil
+	} else {
+		return err
+	}
 }
 
-func RunBackground(listenAddr, secret string, logger *zap.Logger) {
+func RunBackground(ctx context.Context, listenAddr, secret string, logger *zap.Logger) {
 	if secret == "" {
 		return
 	}
 	go func() {
-		if err := Run(listenAddr, secret, logger); err != nil && err != http.ErrServerClosed {
+		if err := Run(ctx, listenAddr, secret, logger); err != nil {
 			logger.Error("command server failed", zap.Error(err))
-			os.Exit(1)
 		}
 	}()
 }

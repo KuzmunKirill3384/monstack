@@ -71,10 +71,19 @@ func ReadCPUStat() (*CPUStats, error) {
 }
 
 func CPUPercent(prev, curr *CPUStats) float64 {
-	totalDelta := curr.Total() - prev.Total()
-	if totalDelta == 0 {
+	ct, pt := curr.Total(), prev.Total()
+	if ct <= pt {
 		return 0
 	}
-	busyDelta := curr.Busy() - prev.Busy()
-	return 100.0 * float64(busyDelta) / float64(totalDelta)
+	totalDelta := ct - pt
+	cb, pb := curr.Busy(), prev.Busy()
+	if cb <= pb {
+		return 0
+	}
+	busyDelta := cb - pb
+	pct := 100.0 * float64(busyDelta) / float64(totalDelta)
+	if pct > 100 {
+		pct = 100
+	}
+	return pct
 }

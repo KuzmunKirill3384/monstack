@@ -94,13 +94,15 @@ func (c *Client) SendIngest(body []byte) error {
 			return nil
 		}
 		if resp.StatusCode == http.StatusRequestEntityTooLarge {
-			backoff = 30 * time.Second
-			lastErr = ErrPayloadTooLarge
 			c.logger.Warn("ingest 413 payload too large", zap.Int("attempt", attempt+1))
-			continue
+			return ErrPayloadTooLarge
+		}
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			c.logger.Warn("ingest client error, not retrying", zap.Int("status", resp.StatusCode))
+			return fmt.Errorf("ingest returned %d", resp.StatusCode)
 		}
 		lastErr = fmt.Errorf("ingest returned %d", resp.StatusCode)
-		c.logger.Debug("ingest non-2xx", zap.Int("status", resp.StatusCode), zap.Int("attempt", attempt+1))
+		c.logger.Debug("ingest non-2xx, will retry", zap.Int("status", resp.StatusCode), zap.Int("attempt", attempt+1))
 	}
 	return lastErr
 }

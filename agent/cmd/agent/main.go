@@ -49,7 +49,7 @@ func main() {
 		cancel()
 	}()
 
-	command.RunBackground(cfg.CommandListenAddr, cfg.CommandSecret, logger)
+	command.RunBackground(ctx, cfg.CommandListenAddr, cfg.CommandSecret, logger)
 
 	svc, err := service.New(cfg, logger)
 	if err != nil {

@@ -282,14 +282,18 @@ async function runTui() {
 
   async function refresh() {
     if (refreshAbort) {
-      refreshAbort.abort?.();
+      refreshAbort.abort();
     }
+    const controller = new AbortController();
+    refreshAbort = controller;
     setLoading(true);
     lastError = null;
     render();
 
     try {
+      if (controller.signal.aborted) return;
       hosts = await apiGet('/hosts');
+      if (controller.signal.aborted) return;
       if (!hosts.length) {
         header.setContent(
           ' No hosts. Start agent: docker compose up -d agent\n'
@@ -318,6 +322,8 @@ async function runTui() {
         );
       }
 
+      if (controller.signal.aborted) return;
+
       if (mode === 'processes' || mode === 'metrics') {
         const to = new Date();
         const from = new Date(to.getTime() - 60000);
@@ -328,6 +334,8 @@ async function runTui() {
         metrics = metricsData;
         if (mode === 'processes') processes = procsData;
       }
+
+      if (controller.signal.aborted) return;
 
       if (mode === 'alerts') {
         const to = new Date();
@@ -346,10 +354,12 @@ async function runTui() {
       lastError = null;
       render();
     } catch (e) {
+      if (controller.signal.aborted) return;
       lastError = e.message;
       render();
     } finally {
       setLoading(false);
+      if (refreshAbort === controller) refreshAbort = null;
     }
   }
 

@@ -61,7 +61,11 @@ func NetBps(prev, curr *NetStats, intervalSec float64) (rxBps, txBps uint64) {
 	if intervalSec <= 0 {
 		return 0, 0
 	}
-	rxBps = uint64(float64(curr.RxBytes-prev.RxBytes) / intervalSec)
-	txBps = uint64(float64(curr.TxBytes-prev.TxBytes) / intervalSec)
+	if curr.RxBytes >= prev.RxBytes {
+		rxBps = uint64(float64(curr.RxBytes-prev.RxBytes) / intervalSec)
+	}
+	if curr.TxBytes >= prev.TxBytes {
+		txBps = uint64(float64(curr.TxBytes-prev.TxBytes) / intervalSec)
+	}
 	return rxBps, txBps
 }

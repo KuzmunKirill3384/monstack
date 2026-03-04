@@ -39,8 +39,8 @@ func readPidStat(pid int) (name string, utime, stime uint64, rssPages uint64, st
 	}
 	name = s[lparen+1 : rparen]
 	rest := strings.Fields(s[rparen+2:])
-	if len(rest) < 14 {
-		return name, 0, 0, 0, "", fmt.Errorf("not enough stat fields")
+	if len(rest) < 22 {
+		return name, 0, 0, 0, "", fmt.Errorf("not enough stat fields (got %d, need 22)", len(rest))
 	}
 	state = rest[0]
 	utime, _ = strconv.ParseUint(rest[11], 10, 64)
@@ -145,12 +145,19 @@ func TopNByCPUAndRSS(all []ProcRaw, prev map[int]ProcRaw, intervalSec float64, n
 		comb float64
 	}
 	scores := make([]score, len(all))
-	tickMult := 100.0 / (float64(clkTick) * intervalSec)
+	tickMult := 0.0
+	if intervalSec > 0 {
+		tickMult = 100.0 / (float64(clkTick) * intervalSec)
+	}
 	for i, p := range all {
 		cpuPct := 0.0
 		if prevP, ok := prev[p.Pid]; ok && intervalSec > 0 {
-			dt := (p.Utime + p.Stime) - (prevP.Utime + prevP.Stime)
-			cpuPct = float64(dt) * tickMult
+			curTicks := p.Utime + p.Stime
+			prevTicks := prevP.Utime + prevP.Stime
+			if curTicks > prevTicks {
+				dt := curTicks - prevTicks
+				cpuPct = float64(dt) * tickMult
+			}
 		}
 		rssMB := float64(p.RssKB) / 1024
 		comb := cpuPct + rssMB/100
@@ -173,8 +180,12 @@ func TopNByCPUAndRSS(all []ProcRaw, prev map[int]ProcRaw, intervalSec float64, n
 		ioR, ioW := uint64(0), uint64(0)
 		if intervalSec > 0 {
 			if prevP, ok := prev[p.Pid]; ok {
-				ioR = uint64(float64(p.Rchar-prevP.Rchar) / intervalSec)
-				ioW = uint64(float64(p.Wchar-prevP.Wchar) / intervalSec)
+				if p.Rchar >= prevP.Rchar {
+					ioR = uint64(float64(p.Rchar-prevP.Rchar) / intervalSec)
+				}
+				if p.Wchar >= prevP.Wchar {
+					ioW = uint64(float64(p.Wchar-prevP.Wchar) / intervalSec)
+				}
 			}
 		}
 		result = append(result, ProcInfo{
