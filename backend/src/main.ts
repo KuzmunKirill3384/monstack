@@ -20,28 +20,15 @@ async function bootstrap() {
     { bufferLogs: true },
   );
   const fastify = app.getHttpAdapter().getInstance();
-  fastify.addContentTypeParser(
-    'application/json',
-    { parseAs: 'buffer' },
-    (req, body, done) => {
-      const encoding = (req.headers['content-encoding'] ?? '') as string;
-      let buf = body as Buffer;
-      if (encoding.toLowerCase() === 'gzip') {
-        try {
-          buf = gunzipSync(buf);
-        } catch (e) {
-          done(e as Error, undefined);
-          return;
-        }
-      }
-      try {
-        const json = JSON.parse(buf.toString('utf8'));
-        done(null, json);
-      } catch (e) {
-        done(e as Error, undefined);
-      }
-    },
-  );
+  fastify.addHook('preParsing', async (request, _reply, payload) => {
+    const encoding = (request.headers['content-encoding'] ?? '') as string;
+    if (encoding.toLowerCase() !== 'gzip') return payload;
+    const chunks: Buffer[] = [];
+    for await (const chunk of payload) {
+      chunks.push(Buffer.from(chunk));
+    }
+    return gunzipSync(Buffer.concat(chunks));
+  });
   await app.register(fastifyCookie, {
     secret: process.env.COOKIE_SECRET ?? 'monstack-cookie-secret',
   });
