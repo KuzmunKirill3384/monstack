@@ -45,13 +45,17 @@
 
 ---
 
+## Где клонировать
+
+Рекомендуется: `~/projects/monstack` или `~/dev/monstack`. Не клонировать в `/tmp` или в системные каталоги.
+
 ## Быстрый старт (из корня репозитория)
 
 ```bash
-make install     # зависимости backend, web, tools/term; npm link для localterm/webterm
+make install     # зависимости backend, web, tools/term
 make up          # стек в Docker (postgres, backend, web, agent)
 make check       # проверка /ready и web
-make term        # Node TUI
+make localterm   # или make webterm, npm run localterm, npm run webterm — без npm link
 ```
 
 Веб: http://localhost:3001 · API: http://localhost:3000 · Swagger: http://localhost:3000/api/docs

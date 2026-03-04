@@ -7,5 +7,9 @@
   "bin": {
     "localterm": "./bin/localterm.js",
     "webterm": "./bin/webterm.js"
+  },
+  "scripts": {
+    "localterm": "node bin/localterm.js",
+    "webterm": "node bin/webterm.js"
   }
 }

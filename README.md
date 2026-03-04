@@ -55,20 +55,40 @@
 
 ## Установка и команды
 
+### Где клонировать репозиторий
+
+Клонируйте в каталог без прав root и без спецсимволов в пути, например:
+
+- **Linux / macOS:** `~/projects/monstack` или `~/dev/monstack`
+- **Не клонируйте** в `/tmp` (очищается), в системные каталоги (нужны права) и в слишком длинные пути (ограничения в ряде систем).
+
+```bash
+git clone https://github.com/KuzmunKirill3384/monstack.git ~/projects/monstack
+cd ~/projects/monstack
+```
+
 ### Быстрый старт
 
 ```bash
-make install    # зависимости backend, web, tools/term + npm link
+make install    # зависимости backend, web, tools/term
+make up         # поднять стек (postgres, backend, web)
 ```
 
-После этого в PATH доступны **`localterm`** и **`webterm`**.
+Запуск TUI и веба **из корня репо** (npm link не нужен):
+
+```bash
+make localterm   # или  npm run localterm   — терминальный TUI
+make webterm     # или  npm run webterm     — Docker + открыть браузер
+```
+
+Чтобы команды `localterm` и `webterm` были доступны из любой папки, опционально: `npm link` из корня репо.
 
 ### Таблица команд
 
 | Команда | Действие |
 |--------|----------|
-| **`localterm`** | Терминальный TUI: баннер с ссылками и подсказками, затем htop-like (обновление 1 с). **Должен быть поднят backend:** `make up`. |
-| **`webterm`** | Поднимает Docker (postgres + backend + web + agent), показывает баннер, через 3 с открывает в браузере http://localhost:3001. |
+| **`make localterm`** / **`npm run localterm`** | Терминальный TUI: баннер, затем htop-like. Нужен backend: `make up`. |
+| **`make webterm`** / **`npm run webterm`** | Поднять Docker, через 3 с открыть в браузере http://localhost:3001. |
 | **`make up`** | Запустить весь стек в Docker (postgres, backend, web, agent). |
 | **`make down`** | Остановить контейнеры. |
 | **`make term`** | Запустить Node TUI (5 экранов, клавиши 1–5 / F1–F5). |

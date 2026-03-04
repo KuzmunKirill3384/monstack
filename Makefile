@@ -35,18 +35,18 @@ help:
 	@echo ""
 	@echo "Клавиши TUI: 1-5|F1-F5 экраны  Enter выбор  s сортировка  f фильтр  r обновить  q выход"
 	@echo ""
-	@echo "После make install: make up, затем localterm или webterm."
+	@echo "После make install: make up, затем make localterm или make webterm."
 
 diagrams:
 	@docker run --rm -v "$$(pwd)/docs/diagrams:/data" plantuml/plantuml -tpng /data/architecture.puml /data/data-flow.puml /data/docker.puml /data/lifecycle.puml /data/repo.puml
 	@echo "Готово: docs/diagrams/*.png"
 
-install: install-backend install-web install-term link
-	@echo "Готово. Запуск: make up  или  localterm / webterm"
+install: install-backend install-web install-term
+	@echo "Готово. Из корня репо: make up, затем make localterm или make webterm (npm run localterm / npm run webterm — тоже)."
+	@echo "Команды в PATH (опционально): npm link"
 
 link:
-	@cd tools/term && npm install --no-save 2>/dev/null || true
-	@npm link 2>/dev/null && echo "Команды localterm и webterm доступны в PATH" || echo "Для localterm/webterm выполните из корня репо: npm link"
+	@npm link 2>/dev/null && echo "localterm и webterm добавлены в PATH" || echo "Не удалось. Используйте из корня: make localterm / make webterm"
 
 install-backend:
 	@echo ">> backend: npm install..."

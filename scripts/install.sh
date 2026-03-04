@@ -32,10 +32,10 @@ else
 fi
 
 echo ""
-(cd "$(dirname "$0")/.." && npm link 2>/dev/null) && echo "Команды localterm и webterm добавлены в PATH" || true
-echo ""
 echo "=== Готово ==="
-echo "  localterm  — терминальный TUI (сначала: make up)"
-echo "  webterm    — поднять Docker и открыть веб в браузере"
-echo "  make up    — только поднять стек"
+echo "  Из корня репо запускайте:"
+echo "    make localterm   или  npm run localterm  — терминальный TUI (сначала: make up)"
+echo "    make webterm     или  npm run webterm     — поднять Docker и открыть веб"
+echo "  make up  — поднять стек (postgres, backend, web)"
 echo "  Backend: http://localhost:3000   Web: http://localhost:3001"
+echo "  Команды в PATH (опционально): npm link"
