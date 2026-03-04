@@ -20,17 +20,26 @@ done
 
 echo "=== Monitoring Stack: полная установка зависимостей ==="
 
-# --- Определение ОС ---
+# --- Определение ОС (debian-like: Ubuntu, Debian, Kali, Mint, Pop по ID и ID_LIKE) ---
 OS=""
 if [[ "$OSTYPE" == "darwin"* ]]; then
   OS="macos"
 elif [[ -f /etc/os-release ]]; then
   . /etc/os-release
-  case "${ID:-}" in
-    ubuntu|debian) OS="ubuntu" ;;
-    fedora|rhel|centos) OS="fedora" ;;
-    *) OS="linux" ;;
-  esac
+  ID="${ID:-}"
+  ID_LIKE="${ID_LIKE:-}"
+  if [[ "$ID" == "ubuntu" || "$ID" == "debian" || "$ID" == "kali" || \
+        "$ID" == "linuxmint" || "$ID" == "pop" ]]; then
+    OS="ubuntu"
+  elif [[ "$ID_LIKE" == *debian* || "$ID_LIKE" == *ubuntu* ]]; then
+    OS="ubuntu"
+  elif [[ "$ID" == "fedora" || "$ID" == "rhel" || "$ID" == "centos" ]]; then
+    OS="fedora"
+  elif [[ "$ID_LIKE" == *rhel* || "$ID_LIKE" == *fedora* ]]; then
+    OS="fedora"
+  else
+    OS="linux"
+  fi
 else
   OS="linux"
 fi

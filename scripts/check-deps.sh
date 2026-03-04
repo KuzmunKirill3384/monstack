@@ -37,10 +37,10 @@ if command -v node >/dev/null 2>&1; then
   fi
 fi
 check "npm" "command -v npm >/dev/null" "идёт с Node.js"
-check "docker" "command -v docker >/dev/null" "apt install docker.io"
-check "docker-socket" "docker info >/dev/null 2>&1" "sudo usermod -aG docker \$USER; newgrp docker"
-check "docker-compose" "command -v docker-compose >/dev/null 2>&1" "apt install docker-compose"
-check "make" "command -v make >/dev/null" "apt install build-essential"
+check "docker" "command -v docker >/dev/null" "Ubuntu/Debian/Kali: apt install docker.io  или  curl -fsSL https://get.docker.com | sh"
+check "docker-socket" "docker info >/dev/null 2>&1" "sudo usermod -aG docker \$USER; затем newgrp docker или перелогиньтесь"
+check "docker-compose" "docker compose version >/dev/null 2>&1 || command -v docker-compose >/dev/null 2>&1" "Ubuntu/Debian/Kali: apt install docker-compose  или установите Docker Compose plugin"
+check "make" "command -v make >/dev/null" "Ubuntu/Debian/Kali: apt install build-essential"
 
 echo ""
 echo ">> Опционально (C TUI)"
@@ -48,8 +48,8 @@ check "gcc" "command -v gcc >/dev/null" "apt install build-essential"
 if [[ "$(uname -s)" == "Darwin" ]]; then
   check "ncurses" "brew list ncurses >/dev/null 2>&1" "brew install ncurses"
 else
-  check "ncurses" "dpkg-query -W -f='\${Status}' libncurses-dev 2>/dev/null | grep -q 'install ok' || pkg-config --exists ncurses 2>/dev/null" "apt install libncurses-dev"
-  check "libcurl" "dpkg-query -W -f='\${Status}' libcurl4-openssl-dev 2>/dev/null | grep -q 'install ok' || pkg-config --exists libcurl 2>/dev/null" "apt install libcurl4-openssl-dev"
+  check "ncurses" "dpkg-query -W -f='\${Status}' libncurses-dev 2>/dev/null | grep -q 'install ok' || pkg-config --exists ncurses 2>/dev/null" "Ubuntu/Debian/Kali: sudo apt install libncurses-dev"
+  check "libcurl" "dpkg-query -W -f='\${Status}' libcurl4-openssl-dev 2>/dev/null | grep -q 'install ok' || pkg-config --exists libcurl 2>/dev/null" "Ubuntu/Debian/Kali: sudo apt install libcurl4-openssl-dev"
 fi
 
 echo ""

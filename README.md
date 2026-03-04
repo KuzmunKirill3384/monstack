@@ -4,6 +4,28 @@
 
 ---
 
+## Quick Start (одна команда)
+
+**Поддерживаются:** Ubuntu, Debian, Kali Linux, Linux Mint, Pop!_OS (Debian-based), Fedora, macOS.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash
+```
+
+Или после клонирования:
+
+```bash
+git clone https://github.com/KuzmunKirill3384/monstack.git ~/projects/monstack
+cd ~/projects/monstack
+./scripts/bootstrap.sh
+```
+
+Скрипт ставит зависимости (Docker, Node.js, Make, ncurses), npm-пакеты, поднимает стек и проверяет готовность. Дальше: `make localterm` (TUI) или откройте http://localhost:3001.
+
+Флаги: `--yes` (без вопросов), `--skip-docker`, `--skip-node`, `--skip-up` (только deps).
+
+---
+
 ## Содержание
 
 1. [Архитектура и как это работает](#архитектура-и-как-это-работает)
@@ -87,6 +109,7 @@ make webterm     # или  npm run webterm     — Docker + открыть бр�
 
 | Команда | Действие |
 |--------|----------|
+| **`make bootstrap`** | One-shot: зависимости, make up, проверка (аналог curl \| bash bootstrap.sh). |
 | **`make localterm`** / **`npm run localterm`** | Терминальный TUI: баннер, затем htop-like. Нужен backend: `make up`. |
 | **`make webterm`** / **`npm run webterm`** | Поднять Docker, через 3 с открыть в браузере http://localhost:3001. |
 | **`make up`** | Запустить весь стек в Docker (postgres, backend, web, agent). |

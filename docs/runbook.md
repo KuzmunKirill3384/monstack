@@ -4,6 +4,25 @@
 
 ---
 
+## One-shot установка (Kali / Ubuntu / Debian)
+
+Одна команда: `curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash`  
+или после клона: `./scripts/bootstrap.sh`. Флаги: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`.
+
+---
+
+## Ошибка: permission denied while trying to connect to the Docker daemon socket
+
+Пользователь не в группе `docker`. Выполните:
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+Затем **выйдите из сессии и зайдите снова** или выполните `newgrp docker`. После этого `make up` и `docker compose` будут работать без sudo.
+
+---
+
 ## Нет хостов в списке
 
 1. **Проверить backend:** `curl -s http://localhost:3000/ready` — должен вернуть `{"status":"ok"}`.

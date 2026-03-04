@@ -6,17 +6,22 @@
 # make term-c  — собрать и запустить C TUI (если есть ncurses и curl)
 
 .PHONY: install install-all install-backend install-web install-term install-term-c link \
-        up up-full down logs term term-c localterm webterm check check-deps term-check test clean help diagrams
+        up up-full down logs term term-c localterm webterm check check-deps term-check test clean help diagrams bootstrap
 
 SHELL := /bin/bash
+COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
 install-all:
 	@./scripts/install-all.sh
 
+bootstrap:
+	@./scripts/bootstrap.sh
+
 help:
 	@echo "Monitoring Stack"
 	@echo ""
-	@echo "  make install-all — полная установка (Node, Docker, Make, ncurses, npm) — Ubuntu/macOS"
+	@echo "  make bootstrap   — one-shot: зависимости + make up + check (Ubuntu/Debian/Kali/macOS)"
+	@echo "  make install-all — полная установка (Node, Docker, Make, ncurses, npm) — Ubuntu/Debian/Kali/macOS"
 	@echo "  make install     — установить зависимости + npm link (localterm, webterm)"
 	@echo "  make up          — запустить стек (postgres, backend, web)"
 	@echo "  make up-full     — + agent (сбор метрик с контейнера)"
@@ -70,20 +75,20 @@ install-term-c:
 
 up:
 	@command -v docker >/dev/null 2>&1 || (echo "Установите Docker: https://docs.docker.com/engine/install/"; exit 1)
-	@command -v docker-compose >/dev/null 2>&1 || (echo ""; echo "Нужен docker-compose. Установите:"; echo "  sudo apt install docker-compose"; echo "или скачайте: https://github.com/docker/compose/releases"; echo ""; exit 1)
-	@docker-compose up -d --build
+	@$(COMPOSE) version >/dev/null 2>&1 || (echo "Нужен docker compose или docker-compose. Ubuntu/Debian/Kali: sudo apt install docker-compose"; exit 1)
+	@$(COMPOSE) up -d --build
 	@echo "Backend: http://localhost:3000  Web: http://localhost:3001"
-	@echo "Agent опционален: docker-compose --profile agent up -d"
+	@echo "Agent опционален: $(COMPOSE) --profile agent up -d"
 
 up-full:
-	@docker-compose --profile agent up -d --build
+	@$(COMPOSE) --profile agent up -d --build
 	@echo "Backend: http://localhost:3000  Web: http://localhost:3001  Agent: включён"
 
 down:
-	@docker-compose down
+	@$(COMPOSE) down
 
 logs:
-	@docker-compose logs -f
+	@$(COMPOSE) logs -f
 
 term:
 	@cd tools/term && npm start

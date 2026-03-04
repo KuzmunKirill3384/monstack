@@ -1,0 +1,25 @@
+# Проверка one-shot установки: bootstrap.sh → make up → make check → term-check
+name: Bootstrap
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Bootstrap (skip node/docker install, use runner)
+        run: ./scripts/bootstrap.sh --yes --skip-docker --skip-node
+      - name: Stack up
+        run: make up
+      - name: Check stack
+        run: make check
+      - name: Term smoke
+        run: make term-check

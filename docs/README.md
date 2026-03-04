@@ -4,6 +4,18 @@
 
 ---
 
+## Quick Start (одна команда)
+
+Поддерживаются: Ubuntu, Debian, Kali, Mint, Pop!_OS, Fedora, macOS.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash
+```
+
+Или: `git clone ... && cd monstack && ./scripts/bootstrap.sh`. Флаги: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`.
+
+---
+
 ## Оглавление
 
 ### Начало работы
