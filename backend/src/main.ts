@@ -8,6 +8,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import fastifyCookie from '@fastify/cookie';
 import fastifyRateLimit from '@fastify/rate-limit';
+import { Readable } from 'stream';
 import { gunzipSync } from 'zlib';
 import { AppModule } from './app.module';
 
@@ -27,7 +28,7 @@ async function bootstrap() {
     for await (const chunk of payload) {
       chunks.push(Buffer.from(chunk));
     }
-    return gunzipSync(Buffer.concat(chunks));
+    return Readable.from(gunzipSync(Buffer.concat(chunks)));
   });
   await app.register(fastifyCookie, {
     secret: process.env.COOKIE_SECRET ?? 'monstack-cookie-secret',
