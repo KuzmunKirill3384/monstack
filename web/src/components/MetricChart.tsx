@@ -26,7 +26,7 @@ export function MetricChart({ data, dataKey, title, unit = '' }: MetricChartProp
   }));
 
   return (
-    <div className="h-64 w-full" role="img" aria-label={`Chart: ${title}`}>
+    <div className="h-64 min-h-[200px] w-full" role="img" aria-label={`Chart: ${title}`}>
       <h3 className="mb-2 text-sm font-medium" id={`chart-${dataKey}`}>{title}</h3>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={points} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>

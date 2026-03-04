@@ -1,87 +1,116 @@
-# Contributing
+# Contributing to Monstack
 
-Рекомендации по разработке и внесению изменений в Monitoring Stack.
-
----
-
-## Требования
-
-- **Node.js** 20+
-- **Go** 1.22+ (для agent)
-- **Docker** (для postgres, backend, web, agent)
-- **macOS / Linux** (агент читает `/proc`, работает только на Linux; в Docker — Linux-контейнер)
+Thank you for considering contributing. This document covers workflow, commit conventions, and code expectations.
 
 ---
 
-## Локальная разработка
+## 1. Code of conduct
+
+By participating, you agree to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+---
+
+## 2. How to contribute
+
+### Reporting bugs
+
+Open an issue with:
+
+- Monstack version (or commit)
+- OS and environment (Docker, Node, Go versions)
+- Steps to reproduce
+- Expected vs actual behavior
+- Relevant logs or screenshots
+
+### Suggesting features
+
+Open an issue describing the use case and proposed behavior. For large changes, discuss in the issue before a big PR.
+
+### Pull requests
+
+1. **Fork** the repository and clone your fork.
+2. **Create a branch** from `main`: `git checkout -b feat/short-description`.
+3. **Make changes**; follow code style and add tests where appropriate.
+4. **Run checks** (see below).
+5. **Commit** with clear messages (prefer Conventional Commits).
+6. **Push** to your fork and open a **Pull Request** against `main`.
+7. Fill in the PR template (if any) and link related issues.
+
+---
+
+## 3. Requirements
+
+- Node.js 20+
+- Go 1.22+ (for agent and CLI)
+- Docker and docker compose
+- macOS or Linux for full stack (agent is Linux-oriented)
+
+---
+
+## 4. Development workflow
 
 ```bash
+git clone https://github.com/YOUR_USER/monstack.git
+cd monstack
 make install
 make up
 make check
 ```
 
-### Backend
+- Backend: `cd backend && npm run start:dev`
+- Web: `cd web && npm run dev`
+- TUI: `make term` or `make term-c`
+
+---
+
+## 5. Before submitting a PR
+
+Run the full test and lint suite:
 
 ```bash
-cd backend
-npm run start:dev    # watch mode
+# Backend
+cd backend && npm run lint && npm run build && npm test && npm run test:e2e
+
+# Web
+cd web && npm run lint && npm run build && npm test
+
+# Agent
+cd agent && go build ./cmd/agent && go test ./...
+
+# Node TUI
+cd tools/term && npm test && make term-check
 ```
 
-Миграции: `npx prisma migrate dev` при изменении schema. Seed: `npx prisma db seed`.
+Or from root: `make test`.
 
-### Web
-
-```bash
-cd web
-npm run dev
-```
-
-### TUI
-
-```bash
-make term         # Node TUI
-make term-c       # C TUI (нужны ncurses, curl)
-```
+Ensure new code is covered by unit or E2E tests where reasonable.
 
 ---
 
-## Тесты
+## 6. Commit conventions
 
-Полный прогон как в CI — см. [docs/runbook.md](docs/runbook.md) (раздел «Как запускать тесты» и «CI тесты падают»).
+Use [Conventional Commits](https://www.conventionalcommits.org/):
 
-По компонентам:
+- `feat:` new feature
+- `fix:` bug fix
+- `docs:` documentation only
+- `test:` tests only
+- `chore:` build, tooling, deps
+- `refactor:` code change without changing behavior
 
-| Команда | Описание |
-|---------|----------|
-| `cd backend && npm test` | Unit-тесты (Jest): сервисы, контроллеры |
-| `cd backend && npm run test:e2e` | E2E: health, ready, auth (моки Prisma) |
-| `cd web && npm test` | Vitest + RTL: api, useAuth, Sparkline, StatPanel, login |
-| `cd web && npm run lint` | ESLint |
-| `cd web && npm run build` | Проверка сборки Next.js |
-| `cd agent && go test ./...` | Тесты Go: config, encoder, transport |
-| `cd tools/term && npm test` | Node TUI: utils, config, api |
-| `make term-check` | TUI smoke (ожидается exit 1 при недоступном API) |
+Example: `feat(web): add skeleton loading for hosts page`.
 
 ---
 
-## Стиль
+## 7. Code and documentation standards
 
-- **Backend:** ESLint + Prettier. `npm run lint`, `npm run format`.
-- **Web:** ESLint (конфиг Next.js).
-- **Документация:** Markdown в `docs/`, единый стиль заголовков и таблиц.
-
----
-
-## Перед PR
-
-1. Backend: `cd backend && npm run lint && npm run build && npm test && npm run test:e2e`
-2. Web: `cd web && npm run lint && npm run build && npm test`
-3. Agent: `cd agent && go build ./cmd/agent && go test ./...`
-4. Term: `cd tools/term && npm test && make term-check`
+- **Backend:** ESLint + Prettier; async/await; avoid business logic in controllers (use services).
+- **Web:** ESLint; functional components; no business logic in UI (use hooks/services).
+- **Go:** `gofmt`; idiomatic Go; handle errors explicitly.
+- **Docs:** Markdown in `docs/` and root; consistent headings and tables; technical tone.
 
 ---
 
-## Коммиты
+## 8. License
 
-Желательно префиксы: `feat:`, `fix:`, `docs:`, `test:`, `chore:` (Conventional Commits).
+By contributing, you agree that your contributions will be licensed under the Apache License, Version 2.0.

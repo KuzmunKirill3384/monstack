@@ -5,7 +5,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/EmptyState';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 import type { Host } from '@/lib/api';
+
+function AlertRulesHint() {
+  return (
+    <details className="text-muted-foreground mb-4 rounded-md border bg-muted/20 text-sm">
+      <summary className="cursor-pointer list-none px-4 py-2 font-medium [&::-webkit-details-marker]:hidden">
+        How to create a rule
+      </summary>
+      <div className="border-t px-4 py-3">
+        <p className="mb-2">
+          Choose a <strong>metric</strong> (e.g. <code className="rounded bg-muted px-1">cpu_total_pct</code>), an
+          <strong> operator</strong> (e.g. &gt;), and a <strong>threshold</strong> (e.g. 90). When the metric crosses
+          the threshold for the given <strong>window</strong>, an alert event is created. Optionally scope the rule to a
+          specific host.
+        </p>
+      </div>
+    </details>
+  );
+}
 
 interface AlertRule {
   id: string;
@@ -60,10 +81,27 @@ export default function AlertRulesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alert-rules'] }),
   });
 
-  if (isLoading) return <p>Loading rules...</p>;
+  if (isLoading) {
+    return (
+      <div>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <Skeleton className="h-8 w-40" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </div>
+        <Skeleton className="h-64 w-full rounded-md" />
+      </div>
+    );
+  }
 
   return (
     <div>
+      <div className="mb-4">
+        <Breadcrumbs items={[{ label: 'Alerts', href: '/alerts' }, { label: 'Alert rules' }]} />
+      </div>
+      <AlertRulesHint />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Alert rules</h1>
         <div className="flex items-center gap-2">
@@ -155,7 +193,11 @@ export default function AlertRulesPage() {
         </table>
       </div>
       {rules.length === 0 && (
-        <p className="text-muted-foreground mt-4">No alert rules. Add one to get started.</p>
+        <EmptyState
+          title="No alert rules"
+          description="Create a rule to get notified when a metric crosses a threshold (e.g. CPU &gt; 90%)."
+          action={{ label: 'Add rule', onClick: () => setShowAdd(true) }}
+        />
       )}
     </div>
   );
@@ -178,14 +220,26 @@ function AddRuleForm({
   const [threshold, setThreshold] = React.useState('');
   const [window, setWindow] = React.useState('5m');
   const [severity, setSeverity] = React.useState('warning');
+  const [errors, setErrors] = React.useState<{ metric?: string; threshold?: string }>({});
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const nextErrors: { metric?: string; threshold?: string } = {};
+    if (!metric.trim()) nextErrors.metric = 'Metric is required';
+    const thresholdNum = threshold.trim() === '' ? null : Number(threshold);
+    if (threshold.trim() !== '' && (Number.isNaN(thresholdNum) || thresholdNum == null)) {
+      nextErrors.threshold = 'Enter a valid number';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+    setErrors({});
     onSave({
       hostId: hostId || null,
-      metric,
+      metric: metric.trim(),
       op,
-      threshold: threshold === '' ? null : Number(threshold),
+      threshold: thresholdNum,
       window,
       severity,
     });
@@ -198,9 +252,10 @@ function AddRuleForm({
         <div>
           <label className="text-muted-foreground mb-1 block text-xs">Host (optional)</label>
           <select
-            className="border-input w-full rounded-md border bg-transparent px-3 py-1.5 text-sm"
+            className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             value={hostId}
             onChange={(e) => setHostId(e.target.value)}
+            aria-label="Host"
           >
             <option value="">All hosts</option>
             {hosts.map((h) => (
@@ -214,16 +269,27 @@ function AddRuleForm({
           <label className="text-muted-foreground mb-1 block text-xs">Metric</label>
           <Input
             value={metric}
-            onChange={(e) => setMetric(e.target.value)}
+            onChange={(e) => {
+              setMetric(e.target.value);
+              if (errors.metric) setErrors((prev) => ({ ...prev, metric: undefined }));
+            }}
             placeholder="cpu_total_pct"
+            aria-invalid={!!errors.metric}
+            aria-describedby={errors.metric ? 'metric-error' : undefined}
           />
+          {errors.metric && (
+            <p id="metric-error" className="text-destructive mt-1 text-xs" role="alert">
+              {errors.metric}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-muted-foreground mb-1 block text-xs">Op</label>
           <select
-            className="border-input w-full rounded-md border bg-transparent px-3 py-1.5 text-sm"
+            className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             value={op}
             onChange={(e) => setOp(e.target.value)}
+            aria-label="Operator"
           >
             <option value="gt">&gt;</option>
             <option value="lt">&lt;</option>
@@ -238,9 +304,19 @@ function AddRuleForm({
             type="number"
             step="any"
             value={threshold}
-            onChange={(e) => setThreshold(e.target.value)}
+            onChange={(e) => {
+              setThreshold(e.target.value);
+              if (errors.threshold) setErrors((prev) => ({ ...prev, threshold: undefined }));
+            }}
             placeholder="80"
+            aria-invalid={!!errors.threshold}
+            aria-describedby={errors.threshold ? 'threshold-error' : undefined}
           />
+          {errors.threshold && (
+            <p id="threshold-error" className="text-destructive mt-1 text-xs" role="alert">
+              {errors.threshold}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-muted-foreground mb-1 block text-xs">Window</label>

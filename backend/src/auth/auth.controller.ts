@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -12,6 +13,7 @@ import { ApiBody, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { AuthService } from './auth.service';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { IsString } from 'class-validator';
 
 const COOKIE_NAME = 'access_token';
@@ -23,6 +25,14 @@ class LoginDto {
 
   @IsString()
   password!: string;
+}
+
+class ChangePasswordDto {
+  @IsString()
+  currentPassword!: string;
+
+  @IsString()
+  newPassword!: string;
 }
 
 @ApiTags('auth')
@@ -65,5 +75,26 @@ export class AuthController {
   @UseGuards(OptionalJwtAuthGuard)
   me(@Req() req: FastifyRequest & { user?: { id: string; email: string } }) {
     return req.user ?? { id: 'anonymous', email: 'anonymous' };
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBody({ type: ChangePasswordDto })
+  async changePassword(
+    @Req() req: FastifyRequest & { user: { id: string; email: string } },
+    @Body() dto: ChangePasswordDto,
+  ) {
+    if (!dto.newPassword || dto.newPassword.length < 6) {
+      throw new BadRequestException('New password must be at least 6 characters');
+    }
+    try {
+      await this.auth.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
+      return { ok: true };
+    } catch (e) {
+      if (e instanceof Error && e.message === 'Current password is wrong') {
+        throw new UnauthorizedException('Current password is wrong');
+      }
+      throw e;
+    }
   }
 }

@@ -3,8 +3,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Monitoring",
-  description: "OS metrics monitoring",
+  title: { default: 'Monstack', template: '%s · Monstack' },
+  description: 'OS metrics monitoring: hosts, dashboards, alerts.',
 };
 
 export default function RootLayout({

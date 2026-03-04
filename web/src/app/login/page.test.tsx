@@ -8,6 +8,7 @@ vi.mock('next/navigation', () => ({
     push: vi.fn(),
     refresh: vi.fn(),
   }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -24,7 +25,7 @@ describe('LoginPage', () => {
   it('renders email and password fields and sign in button', () => {
     render(<LoginPage />);
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
@@ -34,7 +35,7 @@ describe('LoginPage', () => {
     render(<LoginPage />);
 
     await user.type(screen.getByLabelText(/email/i), 'demo@test.com');
-    await user.type(screen.getByLabelText(/password/i), 'demo');
+    await user.type(screen.getByLabelText('Password'), 'demo');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {

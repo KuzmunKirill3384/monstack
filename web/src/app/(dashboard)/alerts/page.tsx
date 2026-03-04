@@ -6,7 +6,48 @@ import { api } from '@/lib/api';
 import { useAlertsStream } from '@/hooks/useAlertsStream';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/EmptyState';
 import type { Host } from '@/lib/api';
+
+function AlertsPageSkeleton() {
+  return (
+    <div>
+      <Skeleton className="mb-6 h-8 w-48" />
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-md border bg-muted/20 p-3">
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-9 w-32" />
+        </div>
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-8" />
+          <Skeleton className="h-9 w-48" />
+        </div>
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-6" />
+          <Skeleton className="h-9 w-48" />
+        </div>
+      </div>
+      <div className="space-y-4">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-5 w-14 rounded" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface AlertEvent {
   id: string;
@@ -58,7 +99,7 @@ export default function AlertsPage() {
     refetchInterval: refreshMs,
   });
 
-  if (isLoading) return <p>Loading alerts...</p>;
+  if (isLoading) return <AlertsPageSkeleton />;
 
   return (
     <div>
@@ -134,7 +175,11 @@ export default function AlertsPage() {
         ))}
       </div>
       {(!events || events.length === 0) && (
-        <p className="text-muted-foreground">No alert events.</p>
+        <EmptyState
+          title="No alert events"
+          description="Events appear when alert rules fire. Create rules in Alert rules and wait for thresholds to be crossed."
+          action={{ label: 'Alert rules', href: '/alerts/rules' }}
+        />
       )}
     </div>
   );

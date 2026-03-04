@@ -35,4 +35,22 @@ export class AuthService {
       access_token: this.signToken(user),
     };
   }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return;
+    const currentHash = crypto
+      .createHash('sha256')
+      .update(currentPassword + (process.env.PASSWORD_SALT ?? 'salt'))
+      .digest('hex');
+    if (user.passwordHash !== currentHash) throw new Error('Current password is wrong');
+    const newHash = crypto
+      .createHash('sha256')
+      .update(newPassword + (process.env.PASSWORD_SALT ?? 'salt'))
+      .digest('hex');
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash },
+    });
+  }
 }

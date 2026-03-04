@@ -70,7 +70,7 @@ describe('ProcessTable', () => {
     vi.mocked(api).mockResolvedValue([]);
     renderWithProvider(<ProcessTable hostId="host-1" />);
     await screen.findByText(/No process data/);
-    expect(screen.getByText(/Agent sends processes every/)).toBeInTheDocument();
+    expect(screen.getByText(/agent sends process snapshots every/i)).toBeInTheDocument();
   });
 
   it('filters by name when filter input is used', async () => {

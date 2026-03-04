@@ -1,427 +1,147 @@
-# Monitoring Stack
+# Monstack
 
-Система мониторинга OS-метрик: агент на Go собирает данные с хостов, бэкенд (NestJS) принимает и хранит в PostgreSQL, веб (Next.js) и терминальные клиенты отображают хосты, графики, процессы и алерты.
+**Monstack** is an integrated monitoring stack for OS metrics: a Go agent collects data from hosts, a NestJS backend ingests and stores it in PostgreSQL, and a Next.js web dashboard plus terminal UIs display hosts, charts, processes, and alerts.
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](package.json)
+[![Node](https://img.shields.io/badge/node-20%2B-brightgreen.svg)](package.json)
+[![Go](https://img.shields.io/badge/go-1.22%2B-00ADD8.svg)](agent/go.mod)
 
 ---
 
-## Установка (одна команда)
+## Features
 
-**Bootstrap с нуля (Kali / Ubuntu / Debian / Mint / Fedora):**
+- **Agent (Go):** Collects CPU, memory, load, network, disk, and top processes from Linux `/proc`; batches and gzips payloads; sends to backend via `POST /v1/ingest` with Bearer token.
+- **Backend (NestJS + Fastify):** Ingest pipeline, host registry, metrics/processes/alert rules and events; Prisma + PostgreSQL; optional JWT auth; rate limiting; health and readiness endpoints.
+- **Web (Next.js):** Dashboard with hosts, host detail (metrics + processes), dashboards, alerts, alert rules, settings; login when auth enabled; responsive UI.
+- **TUI:** Node.js (blessed) and C (ncurses) terminal clients for hosts, processes, metrics, and alerts.
+- **CLI:** `monstack-cli up` builds the stack and agent, generates `.env` if missing; one-command startup with `make up-one`.
+- **Alerts:** Configurable rules (metric, operator, threshold); cron-based evaluation; event history and optional SSE stream.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash
+---
+
+## Architecture Overview
+
+```
++-------------+     POST /v1/ingest      +-------------+     SQL      +------------+
+|   Agent     | ----------------------> |   Backend   | <-----------> | PostgreSQL |
+|   (Go)      |   Bearer host_token     |  (NestJS)   |              |            |
++-------------+                         +-------------+              +------------+
+       ^                                       ^
+       | read /proc, batch, gzip               | GET /hosts, /metrics, /processes,
+       |                                       |     /alerts, /alert-rules
+       |                                       v
++-------------+                         +-------------+
+|  Host OS    |                         | Web / TUI   |
+|  (Linux)    |                         | (clients)   |
++-------------+                         +-------------+
 ```
 
-Или после клона: `./scripts/bootstrap.sh`. Флаги: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`. Подробнее: [docs/runbook.md](docs/runbook.md).
+Data flow: Agent → Backend (ingest) → DB; Web/TUI → Backend (read) → DB. Hosts are identified by token hash; users (when `AUTH_ENABLED=true`) authenticate via JWT in cookies.
 
-### Минимальный путь (Docker + Node)
+See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
-Для запуска **без Go** — только Docker и Node.js:
+---
 
-| Шаг | Команда |
-|-----|---------|
-| 1 | `git clone ... && cd monstack` |
-| 2 | `make install-docker-only` (или `make up`) |
-| 3 | `make localterm` / `make webterm` (нужен Node.js) |
+## Installation
 
-Веб: http://localhost:3001 · API: http://localhost:3000
+- **Docker + Node (minimal):** `git clone ... && cd monstack && make install-docker-only` (or `make up`). Then `make localterm` or `make webterm` (requires Node.js).
+- **Full (with Go CLI):** `make install` then `make up`, or one-shot `make up-one` (builds CLI, creates `.env` if needed, starts stack + agent).
+- **Bootstrap (Ubuntu/Debian/Kali/Fedora/macOS):**  
+  `curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash`
 
-### Полный путь (с Go CLI)
+Requirements: Docker (and docker compose), Node.js 20+ (for web and Node TUI). For agent and CLI: Go 1.22+. See [INSTALLATION.md](INSTALLATION.md).
 
-Нужны: **Docker** (и docker compose), **Go**. Из корня репо:
+---
+
+## Quick Start
 
 ```bash
-git clone https://github.com/KuzmunKirill3384/monstack.git ~/projects/monstack
-cd ~/projects/monstack
+git clone https://github.com/KuzmunKirill3384/monstack.git ~/monstack
+cd ~/monstack
 make up-one
 ```
 
-**`make up-one`** собирает CLI, при отсутствии `.env` создаёт его, поднимает весь стек (postgres, backend, web, agent). Дальше: http://localhost:3001 или из корня репо `make localterm` / `make webterm`.
+- **Web:** http://localhost:3001  
+- **API:** http://localhost:3000  
+- **Swagger:** http://localhost:3000/api/docs  
 
-Чтобы команды **`localterm`** и **`webterm`** были в PATH из любой папки: один раз **`make term-global`** (нужен Node.js). Подробнее: [monstack-cli/README.md](monstack-cli/README.md).
-
-### Устранение проблем
-
-При типичных сбоях (пустой список хостов, нет процессов, алерты не срабатывают, 401, Docker) см. [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md). Краткий чеклист: [docs/runbook.md](docs/runbook.md).
+From repo root: `make localterm` (Node TUI) or `make webterm` (open web in browser). To have `localterm`/`webterm` in PATH: `make term-global`.
 
 ---
 
-## Содержание
+## Usage
 
-1. [Архитектура и как это работает](#архитектура-и-как-это-работает)
-2. [Установка и команды](#установка-и-команды)
-3. [Компоненты системы](#компоненты-системы)
-4. [API и данные](#api-и-данные)
-5. [Структура проекта](#структура-проекта)
-6. [Что сделано](#что-сделано)
-7. [Что предстоит сделать](#что-предстоит-сделать)
+| Command | Description |
+|--------|-------------|
+| `make up` | Start stack (postgres, backend, web, agent). |
+| `make down` | Stop containers. |
+| `make check` | Verify backend and web readiness. |
+| `make localterm` | Run Node TUI (screens 1–5, Enter/s/f/r/q). |
+| `make webterm` | Start stack and open web UI. |
+| `make term-c` | Build and run C TUI (ncurses + curl). |
+| `make test` | Run backend, web, and term tests. |
 
-Подробная документация: [docs/README.md](docs/README.md). Разработка: [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
-
-## Архитектура и как это работает
-
-Диаграммы сгенерированы из [PlantUML](https://plantuml.com/). Исходники: `docs/diagrams/*.puml`. Пересоздать картинки: **`make diagrams`** (нужен Docker и образ `plantuml/plantuml`).
-
-### Схема 1. Уровни системы (сверху вниз)
-
-![Уровни системы](docs/diagrams/architecture.png)
-
-### Схема 2. Поток данных (кто куда шлёт)
-
-![Поток данных](docs/diagrams/dataflow.png)
-
-### Схема 3. Docker: контейнеры и порты
-
-![Docker](docs/diagrams/docker.png)
-
-### Схема 4. Жизненный цикл одной метрики
-
-![Жизненный цикл метрики](docs/diagrams/lifecycle.png)
-
-### Поток данных (таблица)
-
-| Этап | Кто | Что делает |
-|------|-----|------------|
-| 1 | **Agent** | Раз в 10 с читает CPU, память, load, сеть, диск из `/proc`; раз в 30 с — топ процессов. Собирает batch (JSON), сжимает gzip, шлёт `POST /v1/ingest` с заголовком `Authorization: Bearer <host_token>`. |
-| 2 | **Backend** | По токену находит хост (SHA256 токена = `token_hash` в БД). Проверяет `host_id` в теле. Пишет метрики в `metrics_raw`, снимки процессов в `proc_snapshots`, обновляет `host.last_seen_at`. |
-| 3 | **БД** | Хранит хосты, историю метрик, снимки процессов, правила алертов и события. Всё переживает перезапуск. |
-| 4 | **Web / TUI** | Запрашивают `GET /hosts`, `GET /metrics`, `GET /processes` и т.д. Строят графики (Recharts), таблицы процессов (сортировка, фильтр), список алертов. |
-
-### Чем Monstack отличается от Prometheus + Grafana?
-
-| | Monstack | Prometheus + Grafana |
-|---|---------|----------------------|
-| **Время до первого дашборда** | 60 секунд (`make up-one`) | 15–30 минут (prometheus.yml, exporters, datasource, дашборды) |
-| **Компоненты** | 1 стек: agent + backend + web + TUI | 4+ компонента: Prometheus, Grafana, node_exporter, alertmanager |
-| **Язык запросов** | Нет — готовые графики и алерты из коробки | PromQL (мощный, но требует изучения) |
-| **Целевая аудитория** | Небольшие команды, 1–50 хостов, быстрый старт | Инфраструктуры любого масштаба, DevOps-команды |
-| **Кастомные метрики** | Только OS-метрики (CPU, RAM, диск, сеть, процессы) | Любые метрики через exporters и client libraries |
-| **TUI** | Встроенный терминальный интерфейс (Node.js, C) | Нет (только веб) |
-| **Масштаб** | До 50 хостов на одном инстансе | Тысячи хостов, федерация, Thanos/Cortex |
-
-**Когда выбрать Monstack:** мониторинг нескольких серверов без настройки exporters, PromQL и дашбордов. Одна команда — и всё работает.
-
-**Когда выбрать Prometheus:** 100+ хостов, кастомные метрики приложений, multi-tenant, долгосрочное хранение с Thanos, alertmanager с маршрутизацией.
-
-### Зачем база данных
-
-В PostgreSQL хранятся: **хосты** (идентификация по токену), **история метрик** (графики за часы/дни), **снимки процессов**, **правила алертов** и **события**. Без БД после рестарта бэкенда всё теряется; с БД — данные сохраняются.
+See [USAGE.md](USAGE.md) for CLI options and workflows.
 
 ---
 
-## Установка и команды
+## Configuration
 
-### Где клонировать репозиторий
+Main knobs via environment (e.g. `.env` or docker-compose):
 
-Клонируйте в каталог без прав root и без спецсимволов в пути, например:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `postgresql://postgres:postgres@...` | PostgreSQL connection. |
+| `JWT_SECRET` | `change-me-in-production` | Secret for JWT signing. |
+| `AUTH_ENABLED` | `false` | Require login for API (seed: demo@test.com / demo). |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:3000` | Backend URL for web. |
+| `SERVER_URL` / `HOST_ID` / `HOST_TOKEN` | (agent) | Backend URL and host identity for agent. |
 
-- **Linux / macOS:** `~/projects/monstack` или `~/dev/monstack`
-- **Не клонируйте** в `/tmp` (очищается), в системные каталоги (нужны права) и в слишком длинные пути (ограничения в ряде систем).
-
-```bash
-git clone https://github.com/KuzmunKirill3384/monstack.git ~/projects/monstack
-cd ~/projects/monstack
-```
-
-### Быстрый старт
-
-```bash
-make install    # все зависимости (backend, web, term)
-make up         # поднять стек (postgres, backend, web)
-```
-
-Только консоль (без backend/web): **`make install-console`** затем `make up` и `make term-c` или `make localterm`.
-
-Запуск TUI и веба **из корня репо** (npm link не нужен):
-
-```bash
-make localterm   # или  npm run localterm   — терминальный TUI
-make webterm     # или  npm run webterm     — Docker + открыть браузер
-```
-
-Чтобы команды `localterm` и `webterm` были доступны из любой папки, опционально: `npm link` из корня репо.
-
-### Таблица команд
-
-| Команда | Действие |
-|--------|----------|
-| **`make bootstrap`** | One-shot: зависимости, make up, проверка (аналог curl \| bash bootstrap.sh). |
-| **`make install-console`** | Только TUI: term + term-c (без backend/web). Стек через `make up`. |
-| **`make localterm`** / **`npm run localterm`** | Терминальный TUI (хосты, процессы, метрики, алерты). Backend и агент: `make up` или `make up-one`. |
-| **`make webterm`** / **`npm run webterm`** | Поднять Docker, через 3 с открыть в браузере http://localhost:3001. |
-| **`make up`** | Запустить весь стек в Docker (postgres, backend, web, agent). |
-| **`make install-docker-only`** | Только docker compose up (без Go; для пользователей без Go). |
-| **`make down`** | Остановить контейнеры. |
-| **`make term`** | Запустить Node TUI (5 экранов, клавиши 1–5 / F1–F5). |
-| **`make term-check`** | Smoke-тест TUI (проверка выхода при недоступном backend). |
-| **`make term-c`** | Собрать и запустить быстрый TUI на C (1–4 экрана, 500 мс). |
-| **`make check`** | Проверить готовность стека (`/ready`, web). |
-| **`make logs`** | Логи docker compose. |
-| **`make clean`** | Удалить node_modules и сборку term-c. |
-| **`make help`** | Список целей. |
-
-### Ссылки после запуска
-
-| Сервис | URL |
-|--------|-----|
-| Веб-интерфейс | http://localhost:3001 |
-| Backend API | http://localhost:3000 |
-| Swagger (документация API) | http://localhost:3000/api/docs |
-
-### Клавиши и экраны TUI
-
-Node TUI и C TUI используют единую раскладку:
-
-| Клавиша | Действие |
-|---------|----------|
-| **1**, **F1** | Экран Hosts — список хостов с CPU/Mem, Enter = выбрать хост |
-| **2**, **F2** | Экран Processes — таблица процессов |
-| **3**, **F3** | Экран Metrics — CPU, Load, Mem, Disk, sparklines |
-| **4**, **F4** | Экран Alerts — события алертов |
-| **5**, **F5** | Экран Rules (только Node TUI) — правила алертов, Enter = toggle enabled |
-| **Enter** | На Hosts: выбрать хост и перейти к Processes. На Rules: переключить enabled |
-| **s** | Сменить столбец сортировки (Processes) |
-| **S** | Сменить направление сортировки |
-| **f** | Фильтр: на Processes — по PID/имени; на Alerts — по status |
-| **/** | Поиск хостов по имени или ID (только Node TUI, экран Hosts) |
-| **h** | Сменить хост (Processes, при нескольких хостах) |
-| **k**, **F9** | Отправить сигнал процессу (Node TUI: SIGTERM/SIGKILL) |
-| **r** | Обновить данные |
-| **q**, **Esc** | Выход |
-
-В C TUI на экране Hosts: **↑/↓** — выбор строки, **Enter** — выбрать хост.
-
-### Переменные окружения
-
-| Переменная | По умолчанию | Описание |
-|------------|--------------|----------|
-| **API_URL** | `http://localhost:3000` | URL backend API |
-| **TUI_REFRESH_MS** | 5000 | Интервал обновления TUI (мс) |
-| **TUI_ALERTS_REFRESH_MS** | 10000 | Интервал обновления алертов (мс) |
-| **TUI_THEME** | `dark` | Тема: `dark` или `light` (только Node TUI) |
-| **TUI_PROCESS_LIMIT** | 200 | Лимит процессов в запросе |
-| **LOCALTERM_DELAY** | 1000 | Задержка перед запуском TUI (мс), 0 = без задержки |
-
-Файл **`.env.example`** содержит полный список. Скопируйте при необходимости: `cp .env.example .env`.
-
-Подробнее: [docs/TUI.md](docs/TUI.md).
+See [CONFIGURATION.md](CONFIGURATION.md).
 
 ---
 
-## Компоненты системы
+## Screenshots / examples
 
-| Компонент | Технологии | Назначение |
-|-----------|------------|------------|
-| **Agent** | Go | Сбор метрик (CPU, память, load, сеть, диск) и топ процессов с хоста. Отправка batch в backend по HTTP (gzip). Работает **только на Linux** (читает `/proc`). В Docker — Linux-контейнер. |
-| **Backend** | NestJS, Fastify, Prisma | Приём `POST /v1/ingest`, идентификация хоста по токену, запись в БД. API: хосты, метрики, процессы, алерты и правила. Миграции и seed при старте (дефолтный хост + пользователь). |
-| **Web** | Next.js 14+, shadcn/ui, TanStack Query, Recharts | Дашборд: список хостов, страница хоста с графиками и вкладкой «Процессы» (таблица с сортировкой и фильтром, автообновление 2 с), раздел «Алерты». Без входа по логину/паролю. |
-| **Term (Node)** | Node.js, blessed | TUI: 5 экранов (Hosts, Processes, Metrics, Alerts, Rules), спарклайны, поиск по хостам, проверка backend при старте. |
-| **Term (C)** | C, ncurses, libcurl | TUI: 4 экрана (Hosts, Processes, Metrics, Alerts), обновление 500 мс. Проверка backend при старте. |
-| **PostgreSQL** | Postgres 16 | Хранение пользователей, хостов, метрик, снимков процессов, правил и событий алертов. |
-
-Зависимости контейнеров см. **Схему 3** выше (рисунок Docker).
+- **Web UI:** After `make up-one`, open http://localhost:3001 for the dashboard (hosts, metrics, processes, alerts, settings).
+- **API:** Interactive docs at http://localhost:3000/api/docs (Swagger). Example: `curl -s http://localhost:3000/hosts`.
+- **TUI:** Run `make localterm` for the terminal UI (screens 1–5: hosts, processes, metrics, alerts, rules).
 
 ---
 
-## API и данные
+## Documentation
 
-### Основные методы API
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System design, components, data flow. |
+| [INSTALLATION.md](INSTALLATION.md) | Requirements, install from source, Docker. |
+| [USAGE.md](USAGE.md) | Commands, TUI, typical workflows. |
+| [CONFIGURATION.md](CONFIGURATION.md) | Env vars and config files. |
+| [API.md](API.md) | HTTP API reference and examples. |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | Dev setup, tests, lint, build. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute. |
+| [SECURITY.md](SECURITY.md) | Security model and reporting. |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and fixes. |
+| [CHANGELOG.md](CHANGELOG.md) | Version history. |
+| [ROADMAP.md](ROADMAP.md) | Planned work. |
 
-| Метод | Путь | Описание |
-|-------|------|----------|
-| POST | `/v1/ingest` | Приём batch метрик и процессов от агента. Заголовок `Authorization: Bearer <host_token>`. |
-| GET | `/hosts` | Список хостов (опционально `?online=true|false`). |
-| GET | `/hosts/:id` | Один хост по id. |
-| GET | `/metrics` | Метрики за период: `host`, `from`, `to`, `resolution=raw|1m|5m`. |
-| GET | `/processes` | Снимки процессов: `host`, `from`, `to`, `limit`. |
-| GET | `/alerts` | События алертов (фильтры: host, from, to, status). |
-| GET/POST/PATCH/DELETE | `/alert-rules` | CRUD правил алертов. |
-
-Подробно: **Swagger** — http://localhost:3000/api/docs.
-
-### Модель данных (БД)
-
-| Таблица | Назначение |
-|---------|------------|
-| **User** | Пользователи (email, password_hash, role). Сейчас вход отключён. |
-| **Host** | Хосты: id, name, token_hash (SHA256 токена), os, arch, tags, last_seen_at. |
-| **MetricsRaw** | Сырые метрики: ts, host_id, cpu_total_pct, load1/5/15, mem_used_mb, mem_total_mb, disk_used_pct, net_rx_bps, net_tx_bps. |
-| **ProcSnapshot** | Снимок процессов: host_id, ts, pid, name, cpu_pct, rss_mb, io_read_bps, io_write_bps, state. |
-| **AlertRule** | Правило: host_id (или глобальное), metric, op, threshold, window, severity, enabled. |
-| **AlertEvent** | Событие срабатывания: host_id, rule_id, ts, status, message. |
+Extended docs (runbooks, data model, TUI): [docs/](docs/).
 
 ---
 
-## Структура проекта
+## Contributing
 
-### Схема 5. Структура репозитория
-
-![Структура репозитория](docs/diagrams/repo.png)
-
-### Таблица путей
-
-| Путь | Описание |
-|------|----------|
-| **Makefile**, **scripts/install.sh** | Установка зависимостей и `npm link` для команд `localterm` / `webterm`. |
-| **bin/localterm.js**, **bin/webterm.js** | Обёртки: баннер + запуск TUI или Docker. |
-| **package.json** (корень) | Имя пакета и bin для `localterm` / `webterm`. |
-| **agent/** | Go-агент: config, collectors (cpu, mem, load, net, fs), procs, sampler, encoder (JSON+gzip), transport (HTTP), service. |
-| **backend/** | NestJS: auth, hosts, ingest, metrics, processes, alerts, alert-rules, prisma, guards. Dockerfile + entrypoint (migrate, seed, node). |
-| **web/** | Next.js: страницы hosts, hosts/[id] (метрики + процессы), alerts; компоненты MetricChart, DateRangePicker, ProcessTable; middleware /login → /hosts. |
-| **tools/term/** | Node TUI (blessed): tui.js — htop-like; index.js — простой вывод. |
-| **tools/term-c/** | C TUI: main.c (ncurses, libcurl, минимальный разбор JSON), Makefile. |
-| **docs/** | design, api-contracts, data-model, roles, systemd, os-metrics. |
-| **docker-compose.yml** | Сервисы: postgres, backend, web, agent. |
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for workflow, commit conventions, and code requirements.
 
 ---
 
-## Что сделано
+## Security
 
-| Область | Реализовано |
-|---------|-------------|
-| **Агент** | Сбор CPU, памяти, load, сети, диска, топ процессов; batch + gzip; отправка на backend с Bearer-токеном; конфиг (YAML); graceful shutdown. |
-| **Backend** | Ingest по токену хоста; регистрация хоста по last_seen_at; API хостов, метрик, процессов; Prisma, миграции, seed (дефолтный хост + пользователь); алерты: модель, cron-проверка, CRUD правил и GET событий. |
-| **Web** | Список хостов (online/offline), страница хоста с графиками (Recharts) и выбором периода; вкладка «Процессы» — таблица с сортировкой, фильтром, автообновлением 2 с; раздел «Алерты»; без логина. |
-| **Терминал** | Node TUI: 5 экранов, API-check при старте, retry/timeout, темы, sparklines, экран правил; C TUI: 4 экрана, проверка backend, цвета в алертах; localterm/webterm — проверка /ready, webterm ждёт backend перед открытием браузера. |
-| **Запуск** | Docker Compose; Makefile (install, up, down, check, term, term-check, term-c, clean); `make check` — проверка стека; localterm/webterm через npm link. |
-| **Документация** | README с архитектурой, таблицами, командами; docs (design, API, data model, roles и др.). |
+For security-sensitive issues, see [SECURITY.md](SECURITY.md). Do not report vulnerabilities in public issues.
 
 ---
 
-## Что предстоит сделать
+## License
 
-Ниже — список улучшений для «супер подробной и крутой» работы приложения.
-
-### Надёжность и масштаб
-
-| Задача | Описание |
-|--------|----------|
-| TimescaleDB и retention | Включить TimescaleDB (hypertable по `ts` для `metrics_raw`), настроить retention (например 30 дней raw, 90 дней 1m, 180 дней 5m/1h). |
-| Агрегаты 1m/5m/1h | Continuous aggregates или отдельные таблицы для снижения нагрузки на запросах за длинные периоды. |
-| Health checks | Health-эндпоинты backend и web в Docker (healthcheck), зависимость agent от health backend. |
-| Повторы и backoff | В агенте — экспоненциальный backoff при ошибках ingest; лимиты на размер batch. |
-
-### Безопасность и доступ
-
-| Задача | Описание |
-|--------|----------|
-| Включить авторизацию (опционально) | Вернуть JWT для API (или флаг «с авторизацией»): логин, защита GET /hosts, /metrics и т.д. |
-| HTTPS | Обратный прокси (nginx/traefik) с TLS для web и API в продакшене. |
-| Ограничение по токену | Rate limit на ingest по host_token; проверка размера тела. |
-
-### Функциональность
-
-| Задача | Описание |
-|--------|----------|
-| Действия над процессами | API на backend (или через агент): kill/signal процесса по PID; кнопки в веб и TUI. |
-| Больше метрик | Per-CPU, disk I/O, температура (если агент умеет); отображение в веб и TUI. |
-| Дашборды и виджеты | Сохраняемые дашборды, выбор метрик и периодов по умолчанию. |
-| Уведомления | Интеграция алертов: email, Slack, Telegram, webhook. |
-| Поиск и фильтры | По хостам (по имени, тегам), по алертам (по правилу, хосту, дате). |
-
-### Удобство и наблюдение
-
-| Задача | Описание |
-|--------|----------|
-| Логи и трейсинг | Структурированные логи (JSON); опционально trace_id по цепочке agent → backend. |
-| Метрики самого backend | Prometheus-эндпоинт или аналог (количество запросов, ошибок, латентность). |
-| Тесты | E2E: агент → ingest → GET метрик; unit-тесты для ingest, алертов, API. |
-| Деплой | Примеры systemd, ansible/terraform или docker-compose для прода; переменные окружения и секреты. |
-
-### Документация
-
-| Задача | Описание |
-|--------|----------|
-| Runbook | Что проверять при «пустой список хостов», при падении агента, при неработающих алертах. |
-| API-примеры | curl-примеры в README или в docs для всех основных эндпоинтов. |
-
----
-
-## Добавление нового хоста (агент на своей машине)
-
-1. Создать хост в БД (например, с токеном `my-token` и именем `my-server`):
-
-```bash
-docker compose exec postgres psql -U postgres -d monitoring -c "INSERT INTO \"Host\" (id, name, token_hash, \"created_at\") VALUES (gen_random_uuid(), 'my-server', '$(echo -n my-token | sha256sum | awk '{print $1}')', NOW());"
-```
-
-2. Узнать `id` хоста: `SELECT id, name FROM "Host";`
-
-3. На Linux-машине: собрать агент (`cd agent && go build -o monagent ./cmd/agent`), в конфиге указать `server_url`, `host_id`, `host_token`, запустить (systemd или вручную).
-
-**Почему пусто?** Хосты появляются, когда хотя бы один агент начал слать метрики. При `make up` агент уже в контейнере и через 10–20 с хост «local» появляется в UI.
-
----
-
-## Runbook и типичные ошибки
-
-### Пустой список хостов
-
-- **Причина:** Агент ещё не отправлял данные или не может достучаться до backend.
-- **Проверить:** `docker compose ps` — контейнер agent в состоянии Up; `docker compose logs agent` — нет ли ошибок ingest (connection refused, 401, 413).
-- **Решение:** Убедиться, что backend здоров: `curl -s http://localhost:3000/ready`. Подождать 10–30 с после старта; проверить `SERVER_URL` и `HOST_TOKEN` у агента (токен должен совпадать с записью в БД по `token_hash`).
-
-### Пустой список процессов (в TUI или вебе)
-
-- **Частая причина:** Агент должен быть запущен (при `make up` или `make up-one` он стартует вместе со стеком). Подождать 30–60 с после старта и обновить экран (в TUI — клавиша **r**).
-- **Иначе:** Агент шлёт процессы раз в ~30 с. Убедиться, что хост online (зелёный индикатор). Если хост online, но процессов нет — смотреть логи: `docker compose --profile agent logs agent`.
-
-### Пустые алерты / алерты не срабатывают
-
-- **Проверить:** Есть ли правила: `GET /alert-rules`. Правило должно быть `enabled: true`, порог и метрика — осмысленные.
-- **Решение:** Создать правило через веб (Alert rules) или `POST /alert-rules`; подождать окно срабатывания (cron проверяет периодически).
-
-### Опциональная авторизация и логи
-
-- **AUTH_ENABLED:** при `AUTH_ENABLED=true` все GET-запросы к `/hosts`, `/metrics`, `/processes`, `/alerts`, `/alert-rules` требуют JWT. Получить токен: `POST /auth/login` с `email` и `password` (пользователь из seed: demo@test.com / demo). Передавать заголовок `Authorization: Bearer <access_token>`.
-- **LOG_JSON:** при `LOG_JSON=true` бэкенд пишет логи в формате JSON (level, time, msg, context) для парсинга в логагрегаторах.
-
-### Ошибки ingest (413, 429)
-
-- **413 Payload Too Large:** Backend ограничивает тело запроса (по умолчанию 1 MB). Агент при 413 уменьшает число процессов в batch и повторяет.
-- **429 Too Many Requests:** Включён rate limit по host_token. Увеличить лимит (`INGEST_RATE_LIMIT_MAX`, `INGEST_RATE_LIMIT_WINDOW_MS`) или отключить: `INGEST_RATE_LIMIT_DISABLED=1`.
-
-### Агент на своей машине
-
-- Собрать: `cd agent && go build -o monagent ./cmd/agent`.
-- Конфиг YAML: `server_url`, `host_id`, `host_token` (обязательно). Опционально: `command_listen_addr` (по умолчанию `:9090`) и `command_secret` (или `AGENT_COMMAND_SECRET`) для приёма команд kill/signal.
-- В БД у хоста задать `agent_url` (например `http://IP_машины:9090`), чтобы с веб/TUI можно было отправлять сигналы процессам.
-
----
-
-## Примеры API (curl)
-
-Базовый URL: `http://localhost:3000` (или ваш backend).
-
-```bash
-# Health
-curl -s http://localhost:3000/health
-curl -s http://localhost:3000/ready
-
-# Хосты
-curl -s http://localhost:3000/hosts
-curl -s "http://localhost:3000/hosts?online=true"
-
-# Метрики за последний час
-FROM=$(date -u -v-1H +%Y-%m-%dT%H:%M:%S.000Z 2>/dev/null || date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S.000Z)
-TO=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
-curl -s "http://localhost:3000/metrics?host=HOST_ID&from=$FROM&to=$TO&resolution=1m"
-
-# Процессы
-curl -s "http://localhost:3000/processes?host=HOST_ID&limit=50"
-
-# Алерты (события)
-curl -s "http://localhost:3000/alerts"
-curl -s "http://localhost:3000/alerts?status=firing"
-
-# Правила алертов
-curl -s http://localhost:3000/alert-rules
-curl -s "http://localhost:3000/alert-rules?host=HOST_ID"
-
-# Отправить сигнал процессу (требуется agent_url у хоста и AGENT_COMMAND_SECRET)
-curl -s -X POST "http://localhost:3000/hosts/HOST_ID/processes/PID/signal" \
-  -H "Content-Type: application/json" \
-  -d '{"signal":"SIGTERM"}'
-```
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [LICENSE.md](LICENSE.md).

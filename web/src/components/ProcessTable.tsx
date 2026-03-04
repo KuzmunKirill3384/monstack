@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type ProcSnapshot } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/EmptyState';
 
 const REFRESH_MS = 1000;
 const PROCESS_LIMIT = 300;
@@ -98,6 +99,18 @@ export function ProcessTable({ hostId }: { hostId: string }) {
     </th>
   );
 
+  if (!isLoading && processes.length === 0) {
+    return (
+      <div className="space-y-2" role="region" aria-label="Process list">
+        <EmptyState
+          title="No process data"
+          description="The agent sends process snapshots every ~30s. Ensure the host is online and the agent is running."
+          action={{ label: 'View documentation' }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2" role="region" aria-label="Process list">
       <div className="flex flex-wrap items-center gap-4">
@@ -138,7 +151,7 @@ export function ProcessTable({ hostId }: { hostId: string }) {
             {!isLoading && sorted.length === 0 && (
               <tr>
                 <td colSpan={9} className="p-4 text-center text-muted-foreground">
-                  No process data. Agent sends processes every ~30s.
+                  No processes match the filter.
                 </td>
               </tr>
             )}
