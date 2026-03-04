@@ -26,7 +26,7 @@ test('default API_URL', () => {
 });
 
 test('default REFRESH_MS', () => {
-  assert(config.REFRESH_MS === 5000, 'REFRESH_MS default');
+  assert(config.REFRESH_MS === 2000, 'REFRESH_MS default');
 });
 
 test('default API_TIMEOUT_MS', () => {
