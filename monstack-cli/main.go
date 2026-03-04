@@ -31,6 +31,11 @@ func main() {
 	statusCmd := flag.NewFlagSet("status", flag.ExitOnError)
 	statusDir := statusCmd.String("dir", ".", "installation directory")
 
+	upCmd := flag.NewFlagSet("up", flag.ExitOnError)
+	upDir := upCmd.String("dir", ".", "installation directory")
+	upBuild := upCmd.Bool("build", true, "build images before starting")
+	upWithAgent := upCmd.Bool("with-agent", true, "include agent (metrics)")
+
 	upgradeCmd := flag.NewFlagSet("upgrade", flag.ExitOnError)
 	upgradeDir := upgradeCmd.String("dir", ".", "installation directory")
 	upgradeWithAgent := upgradeCmd.Bool("with-agent", false, "include agent profile")
@@ -73,6 +78,13 @@ func main() {
 			fmt.Fprintf(os.Stderr, "status: %v\n", err)
 			os.Exit(1)
 		}
+	case "up":
+		_ = upCmd.Parse(os.Args[2:])
+		d, _ := filepath.Abs(*upDir)
+		if err := runUp(d, *upBuild, *upWithAgent); err != nil {
+			fmt.Fprintf(os.Stderr, "up: %v\n", err)
+			os.Exit(1)
+		}
 	case "upgrade":
 		_ = upgradeCmd.Parse(os.Args[2:])
 		d, _ := filepath.Abs(*upgradeDir)
@@ -97,20 +109,19 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Fprintf(os.Stderr, `monstack-cli — manage Monstack installation (OS: %s)
+	fmt.Fprintf(os.Stderr, `monstack-cli — manage Monstack (OS: %s)
 
 Usage:
-  monstack-cli install   [--dir=<path>] [--jwt-secret=] [--agent-secret=] [--admin-password=] [--with-agent] [--overwrite-env]
-  monstack-cli start     [--dir=<path>] [--build] [--with-agent]
+  monstack-cli up        [--dir=<path>]     — одна команда: .env + запуск с агентом (по умолчанию)
+  monstack-cli install  [--dir=<path>] [--with-agent] [--overwrite-env]
+  monstack-cli start    [--dir=<path>] [--build] [--with-agent]
   monstack-cli stop     [--dir=<path>]
   monstack-cli status   [--dir=<path>]
   monstack-cli upgrade  [--dir=<path>] [--with-agent]
   monstack-cli uninstall [--dir=<path>] [--volumes]
   monstack-cli version
 
-Install: ensures Docker (and optionally Node.js) are available, generates .env with
-secure defaults, then you can run 'start'. Use --dir to point to the repo root (with
-docker-compose.yml). If Docker is missing, run: https://docs.docker.com/engine/install
+Рекомендация: из корня репо — make up-one  или  ./bin/monstack-cli up
 `, osarch.String())
 }
 
@@ -133,6 +144,27 @@ func runInstall(dir, jwtSecret, agentSecret, adminPassword string, withAgent, ov
 		return docker.ComposeUp(dir, true, true)
 	}
 	return nil
+}
+
+func runUp(dir string, build, withAgent bool) error {
+	if _, err := docker.ComposeCmd(); err != nil {
+		fmt.Fprintf(os.Stderr, "Docker: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Install: https://docs.docker.com/engine/install\n")
+		return err
+	}
+	composePath := filepath.Join(dir, "docker-compose.yml")
+	if _, err := os.Stat(composePath); err != nil {
+		return fmt.Errorf("docker-compose.yml not found in %s: run from repo root or use --dir", dir)
+	}
+	envPath := filepath.Join(dir, ".env")
+	if _, err := os.Stat(envPath); err != nil {
+		fmt.Println("No .env — generating with secure defaults...")
+		if err := envfile.Generate(dir, false, "", "", ""); err != nil {
+			return err
+		}
+	}
+	fmt.Printf("Starting stack (build=%v, with-agent=%v)...\n", build, withAgent)
+	return docker.ComposeUp(dir, build, withAgent)
 }
 
 func runStart(dir string, build, withAgent bool) error {

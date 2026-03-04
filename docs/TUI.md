@@ -76,6 +76,8 @@ cd tools/term-c && make
 
 ## Обёртки
 
+После **`make install`** или **`make term-global`** команды **`localterm`** и **`webterm`** доступны из любой папки (через `npm link`). Иначе — из корня репо: `make localterm`, `make webterm`.
+
 ### localterm
 
 Показывает баннер, проверяет `/ready`, через `LOCALTERM_DELAY` мс (по умолчанию 1000) запускает Node TUI.
@@ -93,8 +95,8 @@ cd tools/term-c && make
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
 | API_URL | http://localhost:3000 | URL backend |
-| TUI_REFRESH_MS | 5000 | Интервал обновления (Node TUI) |
-| TUI_ALERTS_REFRESH_MS | 10000 | Интервал обновления алертов |
+| TUI_REFRESH_MS | 2000 | Интервал обновления (Node TUI) |
+| TUI_ALERTS_REFRESH_MS | 5000 | Интервал обновления алертов |
 | TUI_THEME | dark | Тема: dark / light |
 | TUI_PROCESS_LIMIT | 200 | Лимит процессов в запросе |
 | TUI_API_TIMEOUT_MS | 10000 | Таймаут fetch (мс) |

@@ -6,10 +6,10 @@
 
 ## One-shot установка (Kali / Ubuntu / Debian)
 
-Одна команда: `curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash`  
-или после клона: `./scripts/bootstrap.sh`. Флаги: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`.
+- **Bootstrap (всё с нуля):** `curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash` или после клона: `./scripts/bootstrap.sh`. Флаги: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`.
+- **Из корня репо (Docker уже есть):** `make up-one` — одна команда: сборка CLI, генерация `.env`, запуск стека с агентом. Чтобы вызывать **`localterm`** и **`webterm`** из любой папки: один раз выполнить **`make term-global`** (или после полного `make install` они уже в PATH).
 
-**Важно:** команды `make up`, `make localterm`, `make webterm` работают только из **корня репозитория**. Если вы в папке `scripts/` или другой подпапке — перейдите в корень: `cd /путь/к/monstack` (например `cd ~/projects/monstack`).
+**Важно:** команды `make up`, `make up-one`, `make localterm`, `make webterm` работают только из **корня репозитория**. После `make install` или `make term-global` команды **`localterm`** и **`webterm`** доступны из любой папки (через `npm link`).
 
 ---
 

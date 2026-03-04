@@ -5,9 +5,9 @@
 # make term    — запустить Node TUI
 # make term-c  — собрать и запустить C TUI (если есть ncurses и curl)
 
-.PHONY: install install-all install-backend install-web install-term install-term-c install-console link \
+.PHONY: install install-all install-backend install-web install-term install-term-c install-console link term-global \
         up up-full down logs term term-c localterm webterm check check-deps term-check test clean help diagrams bootstrap \
-        cli-build cli-install
+        cli-build cli-install up-one
 
 SHELL := /bin/bash
 COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
@@ -31,7 +31,8 @@ help:
 	@echo "  make check       — проверить готовность стека (backend, web)"
 	@echo "  make check-deps  — проверить установленные пакеты (node, docker, npm, etc)"
 	@echo "  make logs        — логи docker compose"
-	@echo "  make localterm   — терминальный TUI с баннером (без npm link)"
+	@echo "  make term-global — поставить TUI и добавить localterm/webterm в PATH (одна команда из любой папки)"
+	@echo "  make localterm   — терминальный TUI с баннером"
 	@echo "  make webterm     — поднять Docker и открыть веб в браузере"
 	@echo "  make term        — запустить Node TUI (1-5|F1-F5 экраны, Enter, s, f, r, q)"
 	@echo "  make term-check  — smoke-тест Node TUI (запуск 3 сек с недоступным API)"
@@ -39,7 +40,8 @@ help:
 	@echo "  make test        — все тесты (backend, web, term)"
 	@echo "  make clean       — удалить node_modules и сборки"
 	@echo "  make diagrams    — сгенерировать PNG из docs/diagrams/*.puml (Docker)"
-	@echo "  make cli-build    — собрать monstack-cli (Go)"
+	@echo "  make up-one      — одна команда: собрать CLI + поднять стек с агентом"
+	@echo "  make cli-build   — собрать monstack-cli (Go)"
 	@echo ""
 	@echo "Клавиши TUI: 1-5|F1-F5 экраны  Enter выбор  s сортировка  f фильтр  r обновить  q выход"
 	@echo ""
@@ -50,11 +52,11 @@ diagrams:
 	@echo "Готово: docs/diagrams/*.png"
 
 install: install-backend install-web install-term
-	@echo "Готово. Из корня репо: make up, затем make localterm или make webterm (npm run localterm / npm run webterm — тоже)."
-	@echo "Команды в PATH (опционально): npm link"
+	@npm link 2>/dev/null && echo "Готово. Команды localterm и webterm добавлены в PATH — можно вызывать из любой папки." || true
+	@echo "Из корня репо: make up, затем localterm или webterm (или make localterm / make webterm)."
 
 link:
-	@npm link 2>/dev/null && echo "localterm и webterm добавлены в PATH" || echo "Не удалось. Используйте из корня: make localterm / make webterm"
+	@npm link 2>/dev/null && echo "localterm и webterm добавлены в PATH. Запуск: localterm  или  webterm" || echo "Не удалось. Используйте из корня: make localterm / make webterm"
 
 install-backend:
 	@echo ">> backend: npm install..."
@@ -75,6 +77,10 @@ install-term:
 install-term-c:
 	@echo ">> tools/term-c: make..."
 	@cd tools/term-c && make 2>/dev/null || (echo "Нужны: gcc, ncurses, libcurl. Ubuntu: sudo apt install build-essential libncurses-dev libcurl4-openssl-dev; macOS: brew install ncurses curl" && exit 1)
+
+# TUI-зависимости + npm link: после этого localterm и webterm доступны из любой папки
+term-global: install-term
+	@npm link 2>/dev/null && echo "Готово. Запуск из любой папки: localterm  или  webterm" || (echo "Нужен Node.js. Установите: make install-term, затем npm link" && exit 1)
 
 install-console:
 	@echo ">> Установка только консольного TUI (без backend/web)..."
@@ -139,7 +145,11 @@ clean:
 	@echo "clean OK"
 
 cli-build:
-	@cd monstack-cli && go build -o monstack-cli . && mv monstack-cli .. && echo "Built ./monstack-cli"
+	@mkdir -p bin && cd monstack-cli && go build -o ../bin/monstack-cli . && echo "Built ./bin/monstack-cli"
+
+# Одна команда: собрать CLI (если нет), сгенерировать .env при необходимости, поднять стек с агентом
+up-one: cli-build
+	@./bin/monstack-cli up --dir .
 
 cli-install: cli-build
-	@echo "Run from repo root: ./monstack-cli install --dir . && ./monstack-cli start --with-agent"
+	@echo "Run: make up-one   or   ./bin/monstack-cli up"

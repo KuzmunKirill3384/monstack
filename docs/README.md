@@ -63,11 +63,22 @@ curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scri
 
 ## Быстрый старт (из корня репозитория)
 
+**Одна команда (Docker уже установлен):**
+
 ```bash
-make install     # зависимости backend, web, tools/term
-make up          # стек в Docker (postgres, backend, web, agent)
+make up-one      # CLI + .env + стек с агентом
+make term-global # опционально: localterm и webterm в PATH
+```
+
+Дальше из любой папки: **`localterm`** или **`webterm`**.
+
+**Полная установка (backend, web, TUI):**
+
+```bash
+make install     # зависимости + npm link (localterm/webterm в PATH)
+make up          # стек в Docker (postgres, backend, web; агент: make up-full)
 make check       # проверка /ready и web
-make localterm   # или make webterm, npm run localterm, npm run webterm — без npm link
+localterm        # или webterm (уже в PATH после install)
 ```
 
 Веб: http://localhost:3001 · API: http://localhost:3000 · Swagger: http://localhost:3000/api/docs

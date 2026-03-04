@@ -16,11 +16,22 @@ Or from this directory:
 go build -o monstack-cli .
 ```
 
+## One command (from repo root)
+
+```bash
+make up-one
+# or
+./bin/monstack-cli up --dir .
+```
+
+Generates `.env` if missing, starts the stack with agent. Then: `make localterm` or open http://localhost:3001.
+
 ## Commands
 
 | Command     | Description |
 |------------|-------------|
-| `install`  | Check Docker (and optionally Node), generate `.env` with random JWT/agent secrets and optional admin password. Requires `docker-compose.yml` in `--dir`. |
+| **`up`**   | One shot: generate `.env` if missing, then `docker compose up -d --build` with agent. Default for quick start. |
+| `install`  | Generate `.env` only (optional `--with-agent` to start after). |
 | `start`    | Run `docker compose up -d` (optionally `--build`, `--with-agent`). |
 | `stop`     | Run `docker compose down`. |
 | `status`   | Run `docker compose ps`. |
@@ -31,16 +42,15 @@ go build -o monstack-cli .
 ## Usage (from repo root)
 
 ```bash
-# Generate .env and optionally start with agent
-./monstack-cli install --dir .
-./monstack-cli start --dir . --build --with-agent
+# One command
+./bin/monstack-cli up --dir .
 
-# Override secrets
-./monstack-cli install --dir . --jwt-secret=xxx --agent-secret=yyy --admin-password=zzz
+# Override secrets (install only)
+./bin/monstack-cli install --dir . --jwt-secret=xxx --agent-secret=yyy --admin-password=zzz
 
 # Stop / status
-./monstack-cli stop --dir .
-./monstack-cli status --dir .
+./bin/monstack-cli stop --dir .
+./bin/monstack-cli status --dir .
 ```
 
 ## Requirements

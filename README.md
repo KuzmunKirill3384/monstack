@@ -20,7 +20,7 @@ cd ~/projects/monstack
 ./scripts/bootstrap.sh
 ```
 
-Скрипт ставит зависимости (Docker, Node.js, Make, ncurses), npm-пакеты, поднимает стек и проверяет готовность. Дальше: `make localterm` (TUI) или откройте http://localhost:3001.
+Скрипт ставит зависимости (Docker, Node.js, Make, ncurses), npm-пакеты, поднимает стек и проверяет готовность. Дальше: **`localterm`** (TUI) или **`webterm`** (откроет браузер), или http://localhost:3001. После установки команды `localterm` и `webterm` попадают в PATH через `npm link`.
 
 Флаги: `--yes` (без вопросов), `--skip-docker`, `--skip-node`, `--skip-up` (только deps), **`--tui-only`** (только консольный TUI, без backend/web — быстрее).
 
@@ -40,17 +40,19 @@ cd ~/projects/monstack
    make term-c            # или make localterm (Node)
    ```
 
-### Установка через CLI (Go)
+### Установка через CLI (Go) — одна команда
 
-Единый бинарник для установки и управления стеком (генерация `.env`, запуск Docker Compose):
+Из корня репо (Docker уже должен быть установлен):
 
 ```bash
-make cli-build
-./monstack-cli install --dir .
-./monstack-cli start --dir . --build --with-agent
+make up-one
 ```
 
-Команды: `install`, `start`, `stop`, `status`, `upgrade`, `uninstall`. Подробнее: [monstack-cli/README.md](monstack-cli/README.md).
+Собирает CLI, при отсутствии `.env` создаёт его с безопасными ключами, поднимает стек с агентом. Дальше: **`localterm`** или **`webterm`** (если в PATH — см. ниже), или http://localhost:3001.
+
+Чтобы вызывать **`localterm`** и **`webterm`** из любой папки одной командой, один раз выполните: **`make term-global`** (ставит Node TUI и делает `npm link`). После этого просто набирайте `localterm` или `webterm` в терминале.
+
+Отдельные шаги (если нужно): `./bin/monstack-cli install --dir .`, `./bin/monstack-cli start --dir . --build --with-agent`. Команды: `up`, `install`, `start`, `stop`, `status`, `upgrade`, `uninstall`. Подробнее: [monstack-cli/README.md](monstack-cli/README.md).
 
 ---
 
