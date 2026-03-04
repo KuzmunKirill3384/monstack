@@ -62,7 +62,6 @@ services:
       HOST_ID: a0000000-0000-0000-0000-000000000001
       HOST_TOKEN: local-dev-token
       AGENT_COMMAND_SECRET: ${AGENT_COMMAND_SECRET:-dev-secret}
-    restart: on-failure
     depends_on:
       backend:
         condition: service_healthy
