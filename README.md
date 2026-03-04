@@ -28,7 +28,7 @@
 
 ### Схема 2. Поток данных (кто куда шлёт)
 
-![Поток данных](docs/diagrams/data-flow.png)
+![Поток данных](docs/diagrams/dataflow.png)
 
 ### Схема 3. Docker: контейнеры и порты
 
