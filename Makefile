@@ -6,7 +6,7 @@
 # make term-c  — собрать и запустить C TUI (если есть ncurses и curl)
 
 .PHONY: install install-all install-backend install-web install-term install-term-c install-console link term-global \
-        up up-full down logs term term-c localterm webterm check check-deps term-check test clean help diagrams bootstrap \
+        up down logs term term-c localterm webterm check check-deps term-check test clean help diagrams bootstrap \
         cli-build cli-install up-one
 
 SHELL := /bin/bash
@@ -25,8 +25,7 @@ help:
 	@echo "  make install-all — полная установка (Node, Docker, Make, ncurses, npm) — Ubuntu/Debian/Kali/macOS"
 	@echo "  make install         — установить все зависимости (backend, web, term)"
 	@echo "  make install-console — только TUI: term + term-c (без backend/web, стек через Docker)"
-	@echo "  make up          — запустить стек (postgres, backend, web)"
-	@echo "  make up-full     — + agent (сбор метрик с контейнера)"
+	@echo "  make up          — запустить стек (postgres, backend, web, agent)"
 	@echo "  make down        — остановить контейнеры"
 	@echo "  make check       — проверить готовность стека (backend, web)"
 	@echo "  make check-deps  — проверить установленные пакеты (node, docker, npm, etc)"
@@ -93,11 +92,6 @@ up:
 	@$(COMPOSE) version >/dev/null 2>&1 || (echo "Нужен docker compose или docker-compose. Ubuntu/Debian/Kali: sudo apt install docker-compose"; exit 1)
 	@$(COMPOSE) up -d --build
 	@echo "Backend: http://localhost:3000  Web: http://localhost:3001"
-	@echo "Agent опционален: $(COMPOSE) --profile agent up -d"
-
-up-full:
-	@$(COMPOSE) --profile agent up -d --build
-	@echo "Backend: http://localhost:3000  Web: http://localhost:3001  Agent: включён"
 
 down:
 	@$(COMPOSE) down

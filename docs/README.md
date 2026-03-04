@@ -76,7 +76,7 @@ make term-global # опционально: localterm и webterm в PATH
 
 ```bash
 make install     # зависимости + npm link (localterm/webterm в PATH)
-make up          # стек в Docker (postgres, backend, web; агент: make up-full)
+make up          # стек в Docker (postgres, backend, web, agent)
 make check       # проверка /ready и web
 localterm        # или webterm (уже в PATH после install)
 ```

@@ -68,14 +68,11 @@ func splitLines(b []byte) []string {
 	return lines
 }
 
-// ComposeUp runs docker compose up -d (and optionally --build, --profile agent).
-func ComposeUp(dir string, build bool, withAgent bool) error {
+// ComposeUp runs docker compose up -d (optionally --build). All services including agent are started.
+func ComposeUp(dir string, build bool, _ bool) error {
 	args := []string{"up", "-d"}
 	if build {
 		args = append(args, "--build")
-	}
-	if withAgent {
-		args = append(args, "--profile", "agent")
 	}
 	return RunCompose(dir, args...)
 }
@@ -87,7 +84,16 @@ func ComposeDown(dir string) error {
 
 // ComposePs runs docker compose ps and returns combined output.
 func ComposePs(dir string) ([]byte, error) {
-	cmd := exec.Command("docker", "compose", "ps")
+	usePlugin, err := ComposeCmd()
+	if err != nil {
+		return nil, err
+	}
+	var cmd *exec.Cmd
+	if usePlugin {
+		cmd = exec.Command("docker", "compose", "ps")
+	} else {
+		cmd = exec.Command("docker-compose", "ps")
+	}
 	cmd.Dir = dir
 	cmd.Env = os.Environ()
 	return cmd.CombinedOutput()

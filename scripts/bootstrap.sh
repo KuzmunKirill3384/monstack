@@ -6,6 +6,23 @@
 set -e
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
 cd "$ROOT"
+# При запуске через curl | bash репозитория нет — клонируем в ./monstack
+if [[ ! -f "$ROOT/scripts/install.sh" ]]; then
+  echo "[bootstrap] Репозиторий не найден (запуск через curl | bash). Клонируем в ./monstack ..."
+  REPO_URL="https://github.com/KuzmunKirill3384/monstack.git"
+  if [[ -d "monstack" ]] && [[ -f "monstack/scripts/install.sh" ]]; then
+    cd monstack && ROOT="$(pwd)"
+  else
+    command -v git >/dev/null 2>&1 || { echo "[bootstrap] Нужен git: sudo apt install git"; exit 1; }
+    if [[ -d "monstack" ]]; then
+      cd monstack && git pull -q || true
+    else
+      git clone "$REPO_URL" monstack && cd monstack
+    fi
+    ROOT="$(pwd)"
+  fi
+  cd "$ROOT"
+fi
 
 SKIP_DOCKER=false
 SKIP_NODE=false

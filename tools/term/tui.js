@@ -163,7 +163,7 @@ async function runTui() {
       rows.length <= 1
         ? [
             ['(no processes)', '', '', '', ''],
-            ['Tip: make up-full, wait 30s, press r', '', '', '', ''],
+            ['Tip: make up-one or make up, wait 30s, press r', '', '', '', ''],
           ]
         : [];
     table.setData(rows.length > 1 ? rows : [rows[0], ...emptyRows]);

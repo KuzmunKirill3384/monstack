@@ -16,7 +16,7 @@
 ## Backend контейнер unhealthy / не стартует
 
 1. **Логи:** `docker compose logs backend` — смотреть ошибку при старте.
-2. **Часто:** в образе не было `wget`, healthcheck падал. В Dockerfile backend добавлен `apk add wget`. Пересобрать: `docker compose build backend --no-cache` затем `make up-full`.
+2. **Часто:** в образе не было `wget`, healthcheck падал. В Dockerfile backend добавлен `apk add wget`. Пересобрать: `docker compose build backend --no-cache` затем `make up`.
 3. **Prisma:** при ошибке `migrate deploy` или `db seed` — проверить доступ к БД (`docker compose logs postgres`), при повторном seed (дубликат) можно закомментировать seed в entrypoint или очистить volume: `docker compose down -v` (удалит данные БД).
 
 ---
@@ -52,7 +52,7 @@ sudo usermod -aG docker $USER
 
 ## Нет процессов в таблице
 
-1. **Агент должен быть запущен.** По умолчанию `make up` агент **не** поднимает. Нужен стек с агентом: **`make up-full`** или `docker compose --profile agent up -d`. Без агента снимки процессов не попадают в БД.
+1. **Агент должен быть запущен.** При `make up` или `make up-one` агент поднимается вместе со стеком. Без агента снимки процессов не попадают в БД.
 2. **Интервал снимков:** агент шлёт процессы раз в **30 секунд** (`process_interval_sec`). Подождите минимум 30–60 с после запуска агента, затем обновите страницу или запрос.
 3. **Агент в Docker:** в `docker-compose` у сервиса `agent` указано `pid: host` — контейнер видит процессы **хоста**. Если агент запущен на хосте (не в Docker), он и так видит все процессы.
 4. **Проверка API:** `curl -s "http://localhost:3000/processes?host=<host_id>&limit=10"` — подставьте реальный `host_id` из списка хостов. Пустой массив при работающем агенте — проверить логи агента: `docker compose --profile agent logs -f agent`.

@@ -4,55 +4,19 @@
 
 ---
 
-## Quick Start (одна команда)
+## Установка (одна команда)
 
-**Поддерживаются:** Ubuntu, Debian, Kali Linux, Linux Mint, Pop!_OS (Debian-based), Fedora, macOS.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash
-```
-
-Или после клонирования:
+Нужны: **Docker** (и docker compose), **Go**. Из корня репо:
 
 ```bash
 git clone https://github.com/KuzmunKirill3384/monstack.git ~/projects/monstack
 cd ~/projects/monstack
-./scripts/bootstrap.sh
-```
-
-Скрипт ставит зависимости (Docker, Node.js, Make, ncurses), npm-пакеты, поднимает стек и проверяет готовность. Дальше: **`localterm`** (TUI) или **`webterm`** (откроет браузер), или http://localhost:3001. После установки команды `localterm` и `webterm` попадают в PATH через `npm link`.
-
-Флаги: `--yes` (без вопросов), `--skip-docker`, `--skip-node`, `--skip-up` (только deps), **`--tui-only`** (только консольный TUI, без backend/web — быстрее).
-
-### Только консоль (ускоренная установка)
-
-Если нужен только терминальный клиент, без установки Node и сотен npm-пакетов:
-
-1. **Вариант A: C TUI (самый быстрый)** — без Node. Стек в Docker, клиент — один бинарник.
-   ```bash
-   git clone https://github.com/KuzmunKirill3384/monstack.git ~/projects/monstack && cd ~/projects/monstack
-   ./scripts/bootstrap.sh --tui-only   # Docker + системные пакеты + сборка term-c (gcc, ncurses, curl)
-   # затем: newgrp docker (если нужно), cd ~/projects/monstack, make up && make term-c
-   ```
-2. **Вариант B: из корня репо** — стек уже поднят (Docker), ставите только TUI:
-   ```bash
-   make install-console   # только tools/term + tools/term-c, без backend/web
-   make term-c            # или make localterm (Node)
-   ```
-
-### Установка через CLI (Go) — одна команда
-
-Из корня репо (Docker уже должен быть установлен):
-
-```bash
 make up-one
 ```
 
-Собирает CLI, при отсутствии `.env` создаёт его с безопасными ключами, поднимает стек с агентом. Дальше: **`localterm`** или **`webterm`** (если в PATH — см. ниже), или http://localhost:3001.
+**`make up-one`** собирает CLI, при отсутствии `.env` создаёт его, поднимает весь стек (postgres, backend, web, agent). Дальше: http://localhost:3001 или из корня репо `make localterm` / `make webterm`.
 
-Чтобы вызывать **`localterm`** и **`webterm`** из любой папки одной командой, один раз выполните: **`make term-global`** (ставит Node TUI и делает `npm link`). После этого просто набирайте `localterm` или `webterm` в терминале.
-
-Отдельные шаги (если нужно): `./bin/monstack-cli install --dir .`, `./bin/monstack-cli start --dir . --build --with-agent`. Команды: `up`, `install`, `start`, `stop`, `status`, `upgrade`, `uninstall`. Подробнее: [monstack-cli/README.md](monstack-cli/README.md).
+Чтобы команды **`localterm`** и **`webterm`** были в PATH из любой папки: один раз **`make term-global`** (нужен Node.js). Подробнее: [monstack-cli/README.md](monstack-cli/README.md).
 
 ---
 
@@ -143,7 +107,7 @@ make webterm     # или  npm run webterm     — Docker + открыть бр�
 |--------|----------|
 | **`make bootstrap`** | One-shot: зависимости, make up, проверка (аналог curl \| bash bootstrap.sh). |
 | **`make install-console`** | Только TUI: term + term-c (без backend/web). Стек через `make up`. |
-| **`make localterm`** / **`npm run localterm`** | Терминальный TUI (хосты, процессы, метрики, алерты). Backend: `make up`. Для процессов: **`make up-full`**. |
+| **`make localterm`** / **`npm run localterm`** | Терминальный TUI (хосты, процессы, метрики, алерты). Backend и агент: `make up` или `make up-one`. |
 | **`make webterm`** / **`npm run webterm`** | Поднять Docker, через 3 с открыть в браузере http://localhost:3001. |
 | **`make up`** | Запустить весь стек в Docker (postgres, backend, web, agent). |
 | **`make down`** | Остановить контейнеры. |
@@ -358,7 +322,7 @@ docker compose exec postgres psql -U postgres -d monitoring -c "INSERT INTO \"Ho
 
 ### Пустой список процессов (в TUI или вебе)
 
-- **Частая причина:** Агент по умолчанию **не** запускается при `make up`. Для снимков процессов нужен стек с агентом: **`make up-full`** (или `docker compose --profile agent up -d`). Затем подождать 30–60 с и обновить экран (в TUI — клавиша **r**).
+- **Частая причина:** Агент должен быть запущен (при `make up` или `make up-one` он стартует вместе со стеком). Подождать 30–60 с после старта и обновить экран (в TUI — клавиша **r**).
 - **Иначе:** Агент шлёт процессы раз в ~30 с. Убедиться, что хост online (зелёный индикатор). Если хост online, но процессов нет — смотреть логи: `docker compose --profile agent logs agent`.
 
 ### Пустые алерты / алерты не срабатывают

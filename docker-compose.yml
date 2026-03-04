@@ -45,8 +45,6 @@ services:
       - backend
 
   agent:
-    profiles:
-      - agent
     build: ./agent
     pid: host
     environment:
