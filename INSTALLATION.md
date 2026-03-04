@@ -1,127 +1,123 @@
-# Installation
+# Установка
 
-This document covers system requirements, dependencies, and installation methods for Monstack.
-
----
-
-## 1. System requirements
-
-| Requirement | Minimum |
-|-------------|---------|
-| OS | Linux (agent reads `/proc`; backend/web/TUI run on Linux or macOS for dev) |
-| Docker | 20.x+ with Compose v2 (e.g. `docker compose`) |
-| Node.js | 20 LTS or later (for backend, web, Node TUI) |
-| Go | 1.22+ (for agent and monstack-cli; optional if using pre-built images only) |
-| Memory | 512 MB for postgres; 256 MB each for backend/web; 64 MB for agent |
-| Disk | ~500 MB for images and build artifacts; plus DB storage (see retention) |
-
-**For C TUI only:** gcc, ncurses, libcurl (e.g. Ubuntu: `build-essential libncurses-dev libcurl4-openssl-dev`; macOS: `ncurses` and `curl` via Homebrew).
+В документе описаны системные требования, зависимости и способы установки Monstack.
 
 ---
 
-## 2. Dependencies overview
+## 1. Системные требования
 
-- **Backend:** Node.js, npm; Prisma CLI; PostgreSQL (or use Docker).
-- **Web:** Node.js, npm.
-- **Agent:** Go 1.22+ (or use Docker image).
-- **Node TUI:** Node.js, npm (blessed, chalk, etc. in `tools/term`).
-- **CLI:** Go 1.22+ (for `monstack-cli up`).
+| Требование | Минимум |
+|------------|---------|
+| ОС | Linux (агент читает `/proc`; бэкенд/веб/TUI можно запускать на Linux или macOS для разработки) |
+| Docker | 20.x+ с Compose v2 (например `docker compose`) |
+| Node.js | 20 LTS или новее (для бэкенда, веба, Node TUI) |
+| Go | 1.22+ (для агента и monstack-cli; опционально при использовании только образов) |
+| Память | 512 MB для postgres; 256 MB для backend и web; 64 MB для agent |
+| Диск | ~500 MB для образов и артефактов сборки; плюс место под БД (см. retention) |
+
+**Для C TUI:** gcc, ncurses, libcurl (например Ubuntu: `build-essential libncurses-dev libcurl4-openssl-dev`; macOS: `ncurses` и `curl` через Homebrew).
 
 ---
 
-## 3. Install from source
+## 2. Зависимости
 
-### 3.1 Clone repository
+- **Бэкенд:** Node.js, npm; Prisma CLI; PostgreSQL (или через Docker).
+- **Веб:** Node.js, npm.
+- **Агент:** Go 1.22+ (или образ Docker).
+- **Node TUI:** Node.js, npm (blessed и др. в `tools/term`).
+- **CLI:** Go 1.22+ (для `monstack-cli up`).
+
+---
+
+## 3. Установка из исходников
+
+### 3.1 Клонирование
 
 ```bash
 git clone https://github.com/KuzmunKirill3384/monstack.git ~/monstack
 cd ~/monstack
 ```
 
-Use a path without root and without special characters (e.g. `~/projects/monstack`). Avoid `/tmp` (ephemeral) and system directories.
+Рекомендуется путь без root и без спецсимволов (например `~/projects/monstack`). Не клонировать в `/tmp` (временный каталог) и в системные директории.
 
-### 3.2 Minimal path (Docker + Node only)
+### 3.2 Минимальный путь (только Docker + Node)
 
-No Go required. Start stack and use web or Node TUI:
+Без Go. Запуск стека и использование веба или Node TUI:
 
 ```bash
-make install-docker-only   # same as: make up
-# Or: make install  then  make up
-make check                 # verify backend and web
+make install-docker-only   # то же, что make up
+# или: make install, затем make up
+make check                 # проверка backend и web
 ```
 
-Then open http://localhost:3001 or run `make localterm` / `make webterm`.
+Далее открыть http://localhost:3001 или выполнить `make localterm` / `make webterm`.
 
-### 3.3 Full install (backend, web, TUI, optional CLI/agent)
+### 3.3 Полная установка (бэкенд, веб, TUI, опционально CLI/агент)
 
 ```bash
-make install    # backend + web + tools/term npm install; npm link for localterm/webterm
+make install    # npm install в backend, web, tools/term; npm link для localterm/webterm
 make up         # docker compose up (postgres, backend, web, agent)
 make check
 ```
 
-Optional: build Go CLI and agent locally:
+Опционально сборка Go CLI и агента локально:
 
 ```bash
-make cli-build  # builds ./bin/monstack-cli
-# Agent: cd agent && go build -o monagent ./cmd/agent
+make cli-build  # сборка ./bin/monstack-cli
+# Агент: cd agent && go build -o monagent ./cmd/agent
 ```
 
-### 3.4 One-command startup (with Go)
+### 3.4 Однокомандный запуск (с Go)
 
 ```bash
-make up-one     # builds CLI if missing, creates .env if missing, runs ./bin/monstack-cli up
+make up-one     # сборка CLI при отсутствии, создание .env при необходимости, запуск ./bin/monstack-cli up
 ```
 
-This starts the full stack including the in-container agent. Then use `make localterm`, `make webterm`, or open http://localhost:3001.
+Поднимается полный стек, включая агент в контейнере. Далее: `make localterm`, `make webterm` или http://localhost:3001.
 
-### 3.5 Bootstrap script (Linux/macOS)
+### 3.5 Bootstrap-скрипт (Linux/macOS)
 
-On supported systems (Ubuntu, Debian, Kali, Mint, Fedora, macOS):
+На поддерживаемых системах (Ubuntu, Debian, Kali, Fedora, macOS):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash
 ```
 
-Options: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`. Install directory can be set with `INSTALL_DIR=/path`.
+Опции: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`. Каталог установки можно задать через `INSTALL_DIR=/путь`.
 
 ---
 
 ## 4. Docker
 
-The project uses Docker Compose for the core stack.
+Используется Docker Compose для основного стека.
 
-- **Default compose file:** `docker-compose.yml` (services: postgres, backend, web, agent).
-- **Override for TimescaleDB:** `docker-compose.timescale.yml` (use with `-f docker-compose.yml -f docker-compose.timescale.yml` or via `scripts/enable-timescale.sh`).
+- **Файл:** `docker-compose.yml` (сервисы postgres, backend, web, agent).
+- **Override для TimescaleDB:** `docker-compose.timescale.yml` (подключение через `-f` или скрипт `scripts/enable-timescale.sh`).
 
-Ports:
+Порты: Postgres 5432, Backend 3000, Web 3001 (проброс из контейнера 3000).
 
-- Postgres: 5432
-- Backend: 3000
-- Web: 3001 (mapped from container 3000)
-
-Agent runs with `pid: host` so it can collect host processes when the stack runs on the host. For remote hosts, run the agent binary on each host and point `SERVER_URL` to your backend.
+Агент запускается с `pid: host`, чтобы собирать процессы хоста при запуске стека на той же машине. Для удалённых хостов нужно запускать бинарник агента на каждом хосте и указывать SERVER_URL на ваш бэкенд.
 
 ---
 
-## 5. Environment
+## 5. Переменные окружения
 
-Copy and edit env if needed:
+При необходимости скопировать и отредактировать env:
 
 ```bash
 cp .env.example .env
 ```
 
-Required for backend: `DATABASE_URL`. For production: set `JWT_SECRET`, consider `AUTH_ENABLED=true`. See [CONFIGURATION.md](CONFIGURATION.md).
+Для бэкенда обязателен `DATABASE_URL`. В продакшене задать `JWT_SECRET`, рассмотреть `AUTH_ENABLED=true`. См. [CONFIGURATION.md](CONFIGURATION.md).
 
 ---
 
-## 6. Troubleshooting
+## 6. Устранение неполадок
 
-- **Docker not found:** Install Docker Engine and Docker Compose (v2). See [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
-- **Port in use:** Change backend/web ports in compose or stop conflicting services.
-- **Backend unhealthy:** Check `docker compose logs backend` and postgres connectivity; ensure `DATABASE_URL` is correct.
-- **No hosts in UI:** Agent must send at least one successful ingest; wait 10–30 s after start and check agent logs and backend ingest logs.
-- **Prisma errors:** Run `cd backend && npx prisma generate`; for migrations use `npx prisma migrate deploy` (or `migrate dev` in development).
+- **Docker не найден:** установить Docker Engine и Docker Compose v2. См. [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+- **Порт занят:** изменить порты в compose или остановить конфликтующие сервисы.
+- **Бэкенд unhealthy:** проверить `docker compose logs backend` и доступность postgres; проверить `DATABASE_URL`.
+- **Нет хостов в UI:** хосты появляются после хотя бы одного успешного ingest; подождать 10–30 с после `make up`, проверить логи агента и бэкенда.
+- **Ошибки Prisma:** выполнить `cd backend && npx prisma generate`; для миграций — `npx prisma migrate deploy` (или `migrate dev` в разработке).
 
-See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more cases.
+Подробнее: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

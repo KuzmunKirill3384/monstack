@@ -1,32 +1,32 @@
-# Changelog
+# История изменений
 
-All notable changes to this project are documented in this file.
+Все значимые изменения проекта фиксируются в этом файле.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версионирование — [Semantic Versioning](https://semver.org/lang/ru/).
 
 ---
 
-## [1.0.0] - 2025-03-03
+## [1.0.0] — 2025-03-03
 
-### Added
+### Добавлено
 
-- **Agent (Go):** OS metrics collection (CPU, memory, load, network, disk) and process snapshots from Linux `/proc`; batched JSON ingest with gzip; configurable intervals; Bearer token auth.
-- **Backend (NestJS):** Ingest endpoint `POST /v1/ingest`; REST API for hosts, metrics, processes, alert rules and events; optional JWT auth (login, logout, me, change-password); Prisma + PostgreSQL; health and ready endpoints; rate limiting (ingest and read); retention cron; optional aggregation (1m, 5m); pagination for metrics and processes; Swagger at `/api/docs`.
-- **Web (Next.js):** Dashboard with hosts list, host detail (metrics charts and process table), dashboards (overview), alerts and alert rules, settings (profile and change password); login and returnUrl; onboarding overlay; empty states and loading skeletons; global error boundary and API error handling; responsive layout and mobile sidebar; breadcrumbs and documentation link.
-- **TUI:** Node.js (blessed) and C (ncurses) terminal UIs for hosts, processes, metrics, alerts, and rules.
-- **CLI:** `monstack-cli up` for one-command stack startup; `.env` generation; integrated in `make up-one`.
-- **Docker:** Compose setup for postgres, backend, web, agent; optional TimescaleDB override; healthchecks.
-- **Scripts:** Bootstrap, install-all, check-stack, check-deps, enable-timescale.
-- **Tests:** Backend unit and E2E; web Vitest and build; agent Go tests; Node TUI tests; k6 load tests; chaos tests.
-- **Documentation:** Architecture, installation, usage, configuration, API, development, contributing, security, troubleshooting, changelog, roadmap; extended docs in `docs/`.
+- **Агент (Go):** сбор метрик ОС (CPU, память, нагрузка, сеть, диск) и снимков процессов из Linux `/proc`; батчевый JSON ingest с gzip; настраиваемые интервалы; аутентификация Bearer-токеном.
+- **Бэкенд (NestJS):** эндпоинт ingest `POST /v1/ingest`; REST API для хостов, метрик, процессов, правил и событий алертов; опциональная JWT-авторизация (login, logout, me, change-password); Prisma + PostgreSQL; health и ready; rate limiting (ingest и чтение); cron retention; опциональная агрегация (1m, 5m); пагинация метрик и процессов; Swagger на `/api/docs`.
+- **Веб (Next.js):** дашборд со списком хостов, детали хоста (графики метрик и таблица процессов), дашборды (обзор), алерты и правила алертов, настройки (профиль и смена пароля); логин и returnUrl; онбординг; пустые состояния и скелетоны загрузки; глобальный error boundary и обработка ошибок API; адаптивная вёрстка и мобильная боковая панель; хлебные крошки и ссылка на документацию.
+- **TUI:** Node.js (blessed) и C (ncurses) терминальные интерфейсы для хостов, процессов, метрик, алертов и правил.
+- **CLI:** `monstack-cli up` для однокомандного запуска стека; генерация `.env`; интеграция в `make up-one`.
+- **Docker:** Compose для postgres, backend, web, agent; опциональный override TimescaleDB; healthchecks.
+- **Скрипты:** bootstrap, install-all, check-stack, check-deps, enable-timescale.
+- **Тесты:** unit и E2E бэкенда; Vitest и сборка веба; тесты агента на Go; тесты Node TUI; нагрузочные k6; chaos-тесты.
+- **Документация:** архитектура, установка, использование, конфигурация, API, разработка, участие, безопасность, устранение неполадок, changelog, roadmap; расширенная документация в `docs/`.
 
-### Security
+### Безопасность
 
-- Optional JWT-based auth for read API; HttpOnly cookie; change-password endpoint.
-- Host token auth for ingest; rate limits; configurable secrets via env.
+- Опциональная JWT-авторизация для read API; HttpOnly cookie; эндпоинт смены пароля.
+- Аутентификация ingest по токену хоста; rate limits; секреты через env.
 
 ---
 
 ## [Unreleased]
 
-- See [ROADMAP.md](ROADMAP.md) for planned work.
+- Планы см. в [ROADMAP.md](ROADMAP.md).

@@ -1,117 +1,117 @@
-# Troubleshooting
+# Устранение неполадок
 
-Common issues and fixes for Monstack. For runbooks and checklists, see [docs/runbook.md](docs/runbook.md).
-
----
-
-## 1. Installation and dependencies
-
-### Docker or docker compose not found
-
-- Install [Docker Engine](https://docs.docker.com/engine/install/) and ensure Docker Compose v2 is available (`docker compose version`).
-- On Linux, add your user to the `docker` group if needed.
-
-### Node or Go version too old
-
-- Node: use 20 LTS or newer (`node -v`). Install from nodejs.org or via nvm.
-- Go: use 1.22+ (`go version`). Install from go.dev.
-
-### make: command not found
-
-- On Windows use WSL or a Unix-like environment. On macOS/Linux install Xcode Command Line Tools or build-essential.
+Типичные проблемы и решения Monstack. Чеклисты и runbook: [docs/runbook.md](docs/runbook.md).
 
 ---
 
-## 2. Stack and services
+## 1. Установка и зависимости
 
-### Backend container unhealthy or won’t start
+### Docker или docker compose не найден
 
-- Check logs: `docker compose logs backend`.
-- Ensure Postgres is healthy: `docker compose ps` and `docker compose logs postgres`.
-- Verify `DATABASE_URL` (e.g. `postgresql://postgres:postgres@postgres:5432/monitoring`).
-- If migrations fail: `docker compose down -v` (removes volumes) then `make up` again. For persistent data, fix DB and run migrations manually.
+- Установите [Docker Engine](https://docs.docker.com/engine/install/) и убедитесь, что доступен Docker Compose v2 (`docker compose version`).
+- В Linux при необходимости добавьте пользователя в группу `docker`.
 
-### Web shows “Cannot connect” or blank
+### Устаревшая версия Node или Go
 
-- Ensure backend is up and reachable: `curl -s http://localhost:3000/ready`.
-- Check `NEXT_PUBLIC_API_URL` (build-time for Next.js). In Docker it should match how the browser reaches the API (e.g. http://localhost:3000).
-- Open browser dev tools and check for CORS or network errors.
+- Node: нужна 20 LTS или новее (`node -v`). Установка с nodejs.org или через nvm.
+- Go: 1.22+ (`go version`). Установка с go.dev.
 
-### No hosts in UI
+### make: команда не найдена
 
-- Hosts appear only after at least one successful ingest. Default compose runs an agent in a container; wait 10–30 s after `make up`.
-- Check agent logs: `docker compose logs agent`. Look for 401 (wrong token), 413 (body too large), or connection errors.
-- Verify host token: SHA256 of the token must equal `token_hash` in the `Host` table for that host.
+- В Windows используйте WSL или другое Unix-подобное окружение. В macOS/Linux — Xcode Command Line Tools или build-essential.
 
-### Agent 401 Unauthorized
+---
 
-- Token in agent config must match a host in the DB: `token_hash` = SHA256(host_token). Create or update the host record and set `token_hash` accordingly.
-- Ensure `Authorization: Bearer <token>` is sent; no extra spaces or newlines in token.
+## 2. Стек и сервисы
 
-### Agent 413 Payload Too Large
+### Контейнер backend unhealthy или не стартует
 
-- Backend limits ingest body size (e.g. 1 MB). Reduce number of processes per batch in agent config (e.g. `process_top_n`) or increase backend body limit if you control the server.
+- Логи: `docker compose logs backend`.
+- Убедитесь, что postgres в состоянии healthy: `docker compose ps` и `docker compose logs postgres`.
+- Проверьте `DATABASE_URL` (например `postgresql://postgres:postgres@postgres:5432/monitoring`).
+- При падении миграций: `docker compose down -v` (удалит тома) и снова `make up`. Для сохранения данных — исправить доступ к БД и выполнить миграции вручную.
+
+### Веб не подключается или пустой экран
+
+- Проверьте доступность бэкенда: `curl -s http://localhost:3000/ready`.
+- Проверьте `NEXT_PUBLIC_API_URL` (для Next.js задаётся на этапе сборки). В Docker он должен соответствовать тому, как браузер обращается к API (например http://localhost:3000).
+- В DevTools браузера проверьте ошибки CORS и сети.
+
+### Нет хостов в интерфейсе
+
+- Хосты появляются только после хотя бы одного успешного ingest. В стандартном compose агент уже в контейнере; подождите 10–30 с после `make up`.
+- Логи агента: `docker compose logs agent`. Ищите 401 (неверный токен), 413 (слишком большое тело), ошибки соединения.
+- Проверка токена: SHA256 токена из конфига агента должен совпадать с `token_hash` в таблице Host для этого хоста.
+
+### Агент: 401 Unauthorized
+
+- Токен в конфиге агента должен соответствовать хосту в БД: `token_hash` = SHA256(host_token). Создайте или обновите запись хоста с правильным `token_hash`.
+- Заголовок должен быть `Authorization: Bearer <token>` без лишних пробелов и переносов в токене.
+
+### Агент: 413 Payload Too Large
+
+- Бэкенд ограничивает размер тела ingest (например 1 MB). Уменьшите число процессов в батче в конфиге агента (process_top_n) или увеличьте лимит на бэкенде при возможности.
 
 ### 429 Too Many Requests
 
-- Ingest or read rate limit exceeded. Increase limits via env (e.g. `INGEST_RATE_LIMIT_MAX`, `READ_RATE_LIMIT_MAX`) or disable ingest limit with `INGEST_RATE_LIMIT_DISABLED=1` for testing only.
+- Превышен rate limit на ingest или чтение. Увеличьте лимиты через env (INGEST_RATE_LIMIT_MAX, READ_RATE_LIMIT_MAX) или отключите лимит ingest для теста: `INGEST_RATE_LIMIT_DISABLED=1`.
 
 ---
 
-## 3. Database
+## 3. База данных
 
-### DB grows too fast
+### Сильный рост БД
 
-- Enable retention: set `RETENTION_METRICS_DAYS`, `RETENTION_PROCS_DAYS`, `RETENTION_ALERTS_DAYS` (see [CONFIGURATION.md](CONFIGURATION.md)).
-- Consider TimescaleDB and aggregation for large deployments (see `docs/timescale-retention.md` and `scripts/enable-timescale.sh`).
+- Включите retention: задайте RETENTION_METRICS_DAYS, RETENTION_PROCS_DAYS, RETENTION_ALERTS_DAYS (см. [CONFIGURATION.md](CONFIGURATION.md)).
+- Для больших инсталляций рассмотрите TimescaleDB и агрегаты (docs/timescale-retention.md, scripts/enable-timescale.sh).
 
-### Migrations fail
+### Ошибки миграций
 
-- Ensure `DATABASE_URL` is correct and DB is up. Run `cd backend && npx prisma migrate deploy`.
-- If schema and DB are out of sync, backup data and consider `prisma migrate reset` in dev only.
+- Проверьте `DATABASE_URL` и доступность БД. Выполните `cd backend && npx prisma migrate deploy`.
+- При расхождении схемы и БД сделайте бэкап и при необходимости `prisma migrate reset` только в разработке.
 
 ---
 
-## 4. Auth and login
+## 4. Авторизация и вход
 
-### 401 on all API requests
+### 401 на все запросы к API
 
-- When `AUTH_ENABLED=true`, you must log in. Use web `/login` or `POST /auth/login` and send the cookie (or Bearer token) with subsequent requests.
-- Seed user: demo@test.com / demo (after `prisma db seed`).
+- При `AUTH_ENABLED=true` нужен вход. Используйте веб `/login` или POST /auth/login и передавайте cookie (или Bearer) в последующих запросах.
+- Пользователь из seed: demo@test.com / demo (после `prisma db seed`).
 
-### Cookie not sent / CORS
+### Cookie не отправляется / CORS
 
-- Use same origin for web and API in dev, or set `CORS_ORIGIN` and ensure credentials are included in fetch. Web uses `credentials: 'include'`.
+- В разработке используйте один и тот же origin для веба и API или настройте `CORS_ORIGIN` и передачу credentials. Веб использует `credentials: 'include'`.
 
 ---
 
 ## 5. TUI
 
-### Node TUI exits immediately or “backend unavailable”
+### Node TUI сразу выходит или «backend недоступен»
 
-- Set `API_URL` to backend URL (e.g. http://localhost:3000). If backend is down, TUI may exit; this is expected for `make term-check`.
-- Ensure backend is up: `curl -s http://localhost:3000/ready`.
+- Задайте `API_URL` на бэкенд (например http://localhost:3000). При недоступном бэкенде TUI может завершаться — это ожидаемо для `make term-check`.
+- Проверьте бэкенд: `curl -s http://localhost:3000/ready`.
 
-### C TUI won’t build
+### C TUI не собирается
 
-- Install ncurses and libcurl dev packages (e.g. Ubuntu: `libncurses-dev libcurl4-openssl-dev`; macOS: `ncurses` and `curl` via Homebrew). Then `make term-c` or `cd tools/term-c && make`.
-
----
-
-## 6. Alerts
-
-### Alerts never fire
-
-- Ensure alert rules exist and are enabled: check Alert rules in UI or `GET /alert-rules`.
-- Check threshold and metric name (e.g. cpu_total_pct). Backend cron evaluates periodically; allow for window (e.g. 5m) and evaluation interval.
-- Check backend logs for alert cron or evaluation errors.
+- Установите пакеты разработки ncurses и libcurl (Ubuntu: `libncurses-dev libcurl4-openssl-dev`; macOS: `ncurses` и `curl` через Homebrew). Затем `make term-c` или `cd tools/term-c && make`.
 
 ---
 
-## 7. Getting more help
+## 6. Алерты
 
-- **Logs:** `docker compose logs -f [service]`.
-- **Health:** `curl -s http://localhost:3000/health` and `curl -s http://localhost:3000/ready`.
-- **Docs:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) (extended), [docs/runbook.md](docs/runbook.md), [INSTALLATION.md](INSTALLATION.md).
+### Алерты не срабатывают
 
-If you believe you’ve found a bug, open an issue with version, steps, and logs (redact secrets).
+- Убедитесь, что правила созданы и включены: раздел «Правила алертов» в UI или GET /alert-rules.
+- Проверьте порог и имя метрики (например cpu_total_pct). Крон бэкенда проверяет периодически; учтите окно (например 5m) и интервал проверки.
+- В логах бэкенда проверьте ошибки крона алертов.
+
+---
+
+## 7. Дополнительная помощь
+
+- **Логи:** `docker compose logs -f [сервис]`.
+- **Health:** `curl -s http://localhost:3000/health` и `curl -s http://localhost:3000/ready`.
+- **Документация:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md), [docs/runbook.md](docs/runbook.md), [INSTALLATION.md](INSTALLATION.md).
+
+При обнаружении бага создайте issue с версией, шагами и логами (без секретов).

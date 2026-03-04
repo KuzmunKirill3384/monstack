@@ -1,17 +1,17 @@
-# Development
+# Разработка
 
-Guide for developers: project structure, code style, tests, and build.
+Руководство для разработчиков: структура проекта, стиль кода, тесты и сборка.
 
 ---
 
-## 1. Project structure
+## 1. Структура проекта
 
 ```
 monstack/
-├── agent/                 # Go agent (metrics + processes → backend)
+├── agent/                 # Агент на Go (метрики и процессы → бэкенд)
 │   ├── cmd/agent/         # main.go
 │   └── ...
-├── backend/               # NestJS API (Fastify, Prisma)
+├── backend/               # API на NestJS (Fastify, Prisma)
 │   ├── src/
 │   │   ├── main.ts
 │   │   ├── app.module.ts
@@ -20,94 +20,94 @@ monstack/
 │   │   ├── hosts/         # GET hosts, signal
 │   │   ├── metrics/       # GET metrics
 │   │   ├── processes/     # GET processes
-│   │   ├── alerts/        # events, rules, cron, stream
+│   │   ├── alerts/        # события, правила, cron, stream
 │   │   ├── prisma/        # PrismaModule
 │   │   └── common/        # guards, logger
 │   └── prisma/            # schema.prisma, migrations
 ├── web/                   # Next.js (App Router)
 │   └── src/
-│       ├── app/           # pages, layout, providers
+│       ├── app/           # страницы, layout, providers
 │       ├── components/
 │       ├── lib/           # api, auth, utils
 │       ├── hooks/
 │       └── contexts/
-├── monstack-cli/          # Go CLI (up command)
+├── monstack-cli/          # CLI на Go (команда up)
 ├── tools/
 │   ├── term/              # Node TUI (blessed)
 │   └── term-c/            # C TUI (ncurses, curl)
 ├── scripts/               # bootstrap, install, check, timescale
-├── docs/                  # Extended documentation
+├── docs/                  # расширенная документация
 ├── tests/                 # k6 load, chaos
 ├── docker-compose.yml
 ├── Makefile
-└── package.json           # root; bins: localterm, webterm
+└── package.json           # корень; bins: localterm, webterm
 ```
 
 ---
 
-## 2. Prerequisites
+## 2. Требования
 
 - Node.js 20+
-- Go 1.22+ (for agent and CLI)
-- Docker and docker compose
-- macOS or Linux (agent reads `/proc`, Linux only in production)
+- Go 1.22+ (для агента и CLI)
+- Docker и docker compose
+- macOS или Linux (агент читает `/proc`, в продакшене — Linux)
 
 ---
 
-## 3. Local setup
+## 3. Локальный запуск
 
 ```bash
 make install
 make up
 ```
 
-Backend (watch):
+Бэкенд (с watch):
 
 ```bash
 cd backend && npm run start:dev
 ```
 
-Web (dev):
+Веб (режим разработки):
 
 ```bash
 cd web && npm run dev
 ```
 
-Backend: http://localhost:3000. Web: http://localhost:3001. Use `.env` with `DATABASE_URL` pointing to your postgres (e.g. from compose).
+Бэкенд: http://localhost:3000. Веб: http://localhost:3001. В `.env` указать `DATABASE_URL` на вашу postgres (например из compose).
 
 ---
 
-## 4. Database (Prisma)
+## 4. База данных (Prisma)
 
-- Generate client: `cd backend && npx prisma generate`
-- Apply migrations: `npx prisma migrate deploy` (or `migrate dev` in dev)
+- Генерация клиента: `cd backend && npx prisma generate`
+- Применение миграций: `npx prisma migrate deploy` (или `migrate dev` в разработке)
 - Seed: `npx prisma db seed`
 - Studio: `npx prisma studio`
 
 ---
 
-## 5. Code style
+## 5. Стиль кода
 
-- **Backend:** ESLint + Prettier. Run: `npm run lint`, `npm run format`.
-- **Web:** ESLint (Next.js config). Run: `npm run lint`.
-- **Go:** `gofmt`; follow standard Go style.
-- **Commits:** Prefer Conventional Commits (feat:, fix:, docs:, test:, chore:).
+- **Бэкенд:** ESLint + Prettier. Запуск: `npm run lint`, `npm run format`.
+- **Веб:** ESLint (конфиг Next.js). Запуск: `npm run lint`.
+- **Go:** gofmt; следовать стандартному стилю Go.
+- **Коммиты:** желательно Conventional Commits (feat:, fix:, docs:, test:, chore:).
 
 ---
 
-## 6. Tests
+## 6. Тесты
 
-| Component | Command |
+| Компонент | Команда |
 |-----------|---------|
-| Backend unit | `cd backend && npm test` |
-| Backend E2E | `cd backend && npm run test:e2e` |
-| Web | `cd web && npm test` |
-| Web build | `cd web && npm run build` |
-| Agent | `cd agent && go test ./...` |
+| Unit бэкенда | `cd backend && npm test` |
+| E2E бэкенда | `cd backend && npm run test:e2e` |
+| Веб | `cd web && npm test` |
+| Сборка веба | `cd web && npm run build` |
+| Агент | `cd agent && go test ./...` |
 | Node TUI | `cd tools/term && npm test` |
-| TUI smoke | `make term-check` |
+| Smoke TUI | `make term-check` |
 
-Full CI-like run:
+Полный прогон (как в CI):
 
 ```bash
 make test
@@ -115,29 +115,29 @@ make test
 
 ---
 
-## 7. Linting and build
+## 7. Линтеры и сборка
 
-- Backend: `cd backend && npm run lint && npm run build`
-- Web: `cd web && npm run lint && npm run build`
-- Agent: `cd agent && go build ./cmd/agent`
-
----
-
-## 8. Debugging
-
-- Backend: Run with `npm run start:dev`; use breakpoints in IDE (Node inspector).
-- Web: Next.js dev server; React DevTools and network tab.
-- Agent: Run binary with config path; logs to stdout (or configured logger).
-- Database: Use Prisma Studio or direct psql to inspect data.
+- Бэкенд: `cd backend && npm run lint && npm run build`
+- Веб: `cd web && npm run lint && npm run build`
+- Агент: `cd agent && go build ./cmd/agent`
 
 ---
 
-## 9. Diagrams
+## 8. Отладка
 
-PNG diagrams from PlantUML sources:
+- Бэкенд: запуск через `npm run start:dev`; точки останова в IDE (Node inspector).
+- Веб: dev-сервер Next.js; React DevTools и вкладка Network.
+- Агент: запуск бинарника с путём к конфигу; логи в stdout (или настроенный логгер).
+- БД: Prisma Studio или прямой psql.
+
+---
+
+## 9. Диаграммы
+
+Генерация PNG из PlantUML:
 
 ```bash
 make diagrams
 ```
 
-Requires Docker and `plantuml/plantuml` image. Output: `docs/diagrams/*.png`.
+Требуется Docker и образ `plantuml/plantuml`. Результат: `docs/diagrams/*.png`.

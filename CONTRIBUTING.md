@@ -1,53 +1,53 @@
-# Contributing to Monstack
+# Участие в разработке Monstack
 
-Thank you for considering contributing. This document covers workflow, commit conventions, and code expectations.
-
----
-
-## 1. Code of conduct
-
-By participating, you agree to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
+Спасибо за интерес к проекту. В документе описаны workflow, правила коммитов и требования к коду.
 
 ---
 
-## 2. How to contribute
+## 1. Кодекс поведения
 
-### Reporting bugs
-
-Open an issue with:
-
-- Monstack version (or commit)
-- OS and environment (Docker, Node, Go versions)
-- Steps to reproduce
-- Expected vs actual behavior
-- Relevant logs or screenshots
-
-### Suggesting features
-
-Open an issue describing the use case and proposed behavior. For large changes, discuss in the issue before a big PR.
-
-### Pull requests
-
-1. **Fork** the repository and clone your fork.
-2. **Create a branch** from `main`: `git checkout -b feat/short-description`.
-3. **Make changes**; follow code style and add tests where appropriate.
-4. **Run checks** (see below).
-5. **Commit** with clear messages (prefer Conventional Commits).
-6. **Push** to your fork and open a **Pull Request** against `main`.
-7. Fill in the PR template (if any) and link related issues.
+Участвуя в проекте, вы соглашаетесь соблюдать [Кодекс поведения](CODE_OF_CONDUCT.md).
 
 ---
 
-## 3. Requirements
+## 2. Как участвовать
+
+### Сообщения об ошибках
+
+Создайте issue с указанием:
+
+- версии Monstack (или коммита)
+- ОС и окружения (Docker, Node, Go)
+- шагов для воспроизведения
+- ожидаемого и фактического поведения
+- логов или скриншотов при необходимости
+
+### Предложения по функциональности
+
+Создайте issue с описанием сценария использования и предлагаемого поведения. Крупные изменения лучше обсудить в issue перед большим PR.
+
+### Pull Request
+
+1. **Сделайте fork** репозитория и клонируйте свой fork.
+2. **Создайте ветку** от `main`: `git checkout -b feat/краткое-описание`.
+3. **Вносите изменения**, соблюдая стиль кода и добавляя тесты где уместно.
+4. **Запустите проверки** (см. ниже).
+5. **Закоммитьте** с понятными сообщениями (желательно Conventional Commits).
+6. **Запушьте** в свой fork и откройте **Pull Request** в `main`.
+7. Заполните шаблон PR (если есть) и укажите связанные issue.
+
+---
+
+## 3. Требования
 
 - Node.js 20+
-- Go 1.22+ (for agent and CLI)
-- Docker and docker compose
-- macOS or Linux for full stack (agent is Linux-oriented)
+- Go 1.22+ (для агента и CLI)
+- Docker и docker compose
+- macOS или Linux для полного стека (агент ориентирован на Linux)
 
 ---
 
-## 4. Development workflow
+## 4. Окружение разработки
 
 ```bash
 git clone https://github.com/YOUR_USER/monstack.git
@@ -57,60 +57,60 @@ make up
 make check
 ```
 
-- Backend: `cd backend && npm run start:dev`
-- Web: `cd web && npm run dev`
-- TUI: `make term` or `make term-c`
+- Бэкенд: `cd backend && npm run start:dev`
+- Веб: `cd web && npm run dev`
+- TUI: `make term` или `make term-c`
 
 ---
 
-## 5. Before submitting a PR
+## 5. Перед отправкой PR
 
-Run the full test and lint suite:
+Запустите полный набор тестов и линтеров:
 
 ```bash
-# Backend
+# Бэкенд
 cd backend && npm run lint && npm run build && npm test && npm run test:e2e
 
-# Web
+# Веб
 cd web && npm run lint && npm run build && npm test
 
-# Agent
+# Агент
 cd agent && go build ./cmd/agent && go test ./...
 
 # Node TUI
 cd tools/term && npm test && make term-check
 ```
 
-Or from root: `make test`.
+Либо из корня: `make test`.
 
-Ensure new code is covered by unit or E2E tests where reasonable.
-
----
-
-## 6. Commit conventions
-
-Use [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` new feature
-- `fix:` bug fix
-- `docs:` documentation only
-- `test:` tests only
-- `chore:` build, tooling, deps
-- `refactor:` code change without changing behavior
-
-Example: `feat(web): add skeleton loading for hosts page`.
+Новый код по возможности должен быть покрыт unit- или E2E-тестами.
 
 ---
 
-## 7. Code and documentation standards
+## 6. Правила коммитов
 
-- **Backend:** ESLint + Prettier; async/await; avoid business logic in controllers (use services).
-- **Web:** ESLint; functional components; no business logic in UI (use hooks/services).
-- **Go:** `gofmt`; idiomatic Go; handle errors explicitly.
-- **Docs:** Markdown in `docs/` and root; consistent headings and tables; technical tone.
+Используйте [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `feat:` — новая возможность
+- `fix:` — исправление ошибки
+- `docs:` — только документация
+- `test:` — только тесты
+- `chore:` — сборка, инструменты, зависимости
+- `refactor:` — изменение кода без смены поведения
+
+Пример: `feat(web): скелетоны загрузки на странице хостов`.
 
 ---
 
-## 8. License
+## 7. Требования к коду и документации
 
-By contributing, you agree that your contributions will be licensed under the Apache License, Version 2.0.
+- **Бэкенд:** ESLint + Prettier; async/await; бизнес-логика в сервисах, не в контроллерах.
+- **Веб:** ESLint; функциональные компоненты; без бизнес-логики в UI (хуки/сервисы).
+- **Go:** gofmt; идиоматичный Go; явная обработка ошибок.
+- **Документация:** Markdown в `docs/` и корне; единый стиль заголовков и таблиц; технический тон.
+
+---
+
+## 8. Лицензия
+
+Участвуя в проекте, вы соглашаетесь, что ваши контрибуции будут распространяться под Apache License, Version 2.0.

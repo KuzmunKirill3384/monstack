@@ -1,32 +1,32 @@
-# License
+# Лицензия
 
-Monstack is licensed under the **Apache License, Version 2.0**.
+Monstack распространяется под лицензией **Apache License, Version 2.0**.
 
-- **Full text:** [LICENSE](LICENSE) in the root of this repository.
-- **SPDX identifier:** `Apache-2.0`
+- **Полный текст:** [LICENSE](LICENSE) в корне репозитория.
+- **Идентификатор SPDX:** `Apache-2.0`
 
-## Summary
+## Кратко
 
-You may:
+Разрешено:
 
-- Use the software commercially and privately
-- Modify and create derivative works
-- Distribute source and binary forms
-- Use patent grants provided by contributors (under the terms of the license)
+- Использовать программу в коммерческих и частных целях
+- Изменять и создавать производные произведения
+- Распространять исходный код и бинарные сборки
+- Использовать патентные права, предоставленные контрибьюторами (в рамках условий лицензии)
 
-You must:
+Обязательно:
 
-- Include a copy of the license and any NOTICE file
-- State significant changes made to the code
-- Retain copyright, patent, trademark, and attribution notices
+- Включать копию лицензии и файла NOTICE (если есть)
+- Указывать существенные изменения, внесённые в код
+- Сохранять уведомления об авторских правах, патентах, товарных знаках и атрибуции
 
-The license includes a patent grant from contributors; that grant terminates if you bring patent litigation against the work.
+Лицензия содержит патентную оговорку от контрибьюторов; она прекращается, если вы инициируете патентный иск в отношении этой работы.
 
-## Why Apache 2.0
+## Зачем Apache 2.0
 
-- **Permissive:** Fits an integrated stack (agent, backend, web, TUI) that may be used in both open-source and commercial environments.
-- **Patent clarity:** Explicit patent grant reduces uncertainty for adopters and contributors.
-- **Compatibility:** Widely used in the industry and compatible with inclusion in larger Apache and other permissively licensed projects.
-- **Attribution:** Requires preservation of notices and license text, which helps sustain project identity and credit.
+- **Разрешительная:** подходит для интегрированного стека (агент, бэкенд, веб, TUI), который может использоваться в открытых и коммерческих средах.
+- **Патентная ясность:** явная патентная оговорка снижает неопределённость для пользователей и контрибьюторов.
+- **Совместимость:** широко используется в индустрии и совместима с включением в проекты под Apache и другие разрешительные лицензии.
+- **Атрибуция:** требуется сохранение уведомлений и текста лицензии, что помогает сохранять идентичность проекта и указывать авторство.
 
-For exact terms and conditions, see [LICENSE](LICENSE).
+Точные условия см. в [LICENSE](LICENSE).

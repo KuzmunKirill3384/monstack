@@ -1,55 +1,55 @@
-# Security
+# Безопасность
 
-Security model, threat considerations, and how to report vulnerabilities.
-
----
-
-## 1. Threat model (summary)
-
-- **Agents** authenticate to the backend with a **host token** (Bearer). The token is a shared secret; its SHA256 is stored in the DB. Anyone with the token can send data as that host.
-- **Users** (when `AUTH_ENABLED=true`) authenticate via **login**; the backend issues a JWT in an HttpOnly cookie. Read API access is gated by this (or optional anonymous).
-- **Backend** listens on all interfaces by default; in production it should be behind TLS and access control (e.g. reverse proxy, firewall).
-- **Database** holds host identity, metrics, process snapshots, alert rules and events, and user credentials (hashed). Compromise of DB or backend can expose or alter this data.
+Модель безопасности, учёт угроз и сообщение об уязвимостях.
 
 ---
 
-## 2. Authentication and authorization
+## 1. Модель угроз (кратко)
 
-- **Ingest:** Only host token is checked (no user identity). Do not expose host tokens; rotate if compromised.
-- **Read API:** When `AUTH_ENABLED=true`, endpoints require a valid JWT (cookie or Bearer). Optional anonymous mode allows unauthenticated read (suitable only for trusted networks).
-- **Passwords:** Stored as salted hashes (e.g. SHA256 + salt). Use strong `JWT_SECRET` and `PASSWORD_SALT` in production.
-
----
-
-## 3. Known considerations
-
-- **Secrets in env:** `JWT_SECRET`, `PASSWORD_SALT`, `AGENT_COMMAND_SECRET`, and DB credentials must be kept secret and not committed.
-- **CORS:** Backend allows credentials; set `CORS_ORIGIN` appropriately in production.
-- **Rate limits:** Ingest and read rate limits reduce abuse; tune via env (see [CONFIGURATION.md](CONFIGURATION.md)).
-- **Input validation:** Backend uses validation pipes and Prisma; agent payloads are validated before write.
-- **Dependencies:** Keep Node and Go deps updated; run `npm audit` and review Go modules.
+- **Агенты** аутентифицируются на бэкенде по **токену хоста** (Bearer). Токен — общий секрет; в БД хранится его SHA256. Любой, кто знает токен, может отправлять данные от имени этого хоста.
+- **Пользователи** (при `AUTH_ENABLED=true`) проходят **логин**; бэкенд выдаёт JWT в HttpOnly cookie. Доступ к read API контролируется этим токеном (или опционально анонимным режимом).
+- **Бэкенд** по умолчанию слушает на всех интерфейсах; в продакшене должен работать за TLS и контролем доступа (обратный прокси, файрвол).
+- **БД** хранит идентификацию хостов, метрики, снимки процессов, правила и события алертов, учётные данные пользователей (хеши). Компрометация БД или бэкенда может привести к утечке или изменению этих данных.
 
 ---
 
-## 4. Reporting vulnerabilities
+## 2. Аутентификация и авторизация
 
-**Do not report security vulnerabilities in public issues.**
-
-Please report sensitive security issues privately (e.g. via GitHub Security Advisories or a contact method listed in the repository). Include:
-
-- Description of the issue and impact
-- Steps to reproduce (if applicable)
-- Suggested fix or mitigation (optional)
-
-We will acknowledge and work on a fix; we may coordinate disclosure after a patch is available.
+- **Ingest:** проверяется только токен хоста (личность пользователя не используется). Токены хостов не должны раскрываться; при компрометации — ротация.
+- **Read API:** при `AUTH_ENABLED=true` эндпоинты требуют валидный JWT (cookie или Bearer). Опциональный анонимный режим допускает чтение без входа (только для доверенных сетей).
+- **Пароли:** хранятся в виде солёных хешей (например SHA256 + salt). В продакшене использовать надёжные `JWT_SECRET` и `PASSWORD_SALT`.
 
 ---
 
-## 5. Best practices for deployers
+## 3. Учёт рисков
 
-- Use **HTTPS** (reverse proxy with TLS) for backend and web.
-- Set **strong secrets** (`JWT_SECRET`, `PASSWORD_SALT`, `AGENT_COMMAND_SECRET`) and do not use defaults in production.
-- Enable **AUTH_ENABLED=true** if the API is reachable from untrusted networks.
-- Restrict **network access** to the backend and DB (firewall, private network).
-- Run containers as **non-root** where possible and keep images updated.
-- **Back up** the database and protect backup storage.
+- **Секреты в env:** JWT_SECRET, PASSWORD_SALT, AGENT_COMMAND_SECRET и учётные данные БД должны храниться в секрете и не попадать в репозиторий.
+- **CORS:** бэкенд разрешает credentials; в продакшене задать `CORS_ORIGIN` соответственно.
+- **Rate limit:** ограничения на ingest и чтение снижают риск злоупотреблений; настраиваются через env (см. [CONFIGURATION.md](CONFIGURATION.md)).
+- **Валидация ввода:** бэкенд использует validation pipes и Prisma; payload агента проверяется перед записью.
+- **Зависимости:** поддерживать актуальные версии Node и Go; выполнять `npm audit` и просматривать модули Go.
+
+---
+
+## 4. Сообщение об уязвимостях
+
+**Не создавайте публичные issue по уязвимостям.**
+
+Сообщайте о проблемах безопасности в приватном порядке (например через GitHub Security Advisories или контакт, указанный в репозитории). Укажите:
+
+- описание и влияние
+- шаги воспроизведения (если применимо)
+- предложение по исправлению (по желанию)
+
+Мы подтвердим получение и постараемся подготовить исправление; возможна согласованная публикация после выхода патча.
+
+---
+
+## 5. Рекомендации при развёртывании
+
+- Использовать **HTTPS** (обратный прокси с TLS) для бэкенда и веба.
+- Задать **надёжные секреты** (JWT_SECRET, PASSWORD_SALT, AGENT_COMMAND_SECRET) и не использовать значения по умолчанию в продакшене.
+- Включить **AUTH_ENABLED=true**, если API доступен из ненадёжных сетей.
+- Ограничить **сетевой доступ** к бэкенду и БД (файрвол, приватная сеть).
+- Запускать контейнеры от **не-root** где возможно и обновлять образы.
+- Выполнять **резервное копирование** БД и защищать хранилище бэкапов.
