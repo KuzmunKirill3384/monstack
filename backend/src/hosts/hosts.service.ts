@@ -18,7 +18,9 @@ export class HostsService {
     const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
     const recentMetrics = await this.prisma.metricsRaw.findMany({
       where: { ts: { gte: fiveMinAgo } },
-      orderBy: { ts: 'desc' },
+      distinct: ['hostId'],
+      orderBy: [{ hostId: 'asc' }, { ts: 'desc' }],
+      take: 1000,
     });
     const lastMetricByHost = new Map<string, MetricsRaw>();
     for (const m of recentMetrics) {
@@ -42,7 +44,9 @@ export class HostsService {
             : null,
         };
       })
-      .filter((h) => (onlineOnly === undefined ? true : onlineOnly ? h.online : !h.online));
+      .filter((h) =>
+        onlineOnly === undefined ? true : onlineOnly ? h.online : !h.online,
+      );
   }
 
   async findOne(id: string) {
@@ -72,7 +76,12 @@ export class HostsService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  async create(data: { name: string; token: string; os?: string; arch?: string }) {
+  async create(data: {
+    name: string;
+    token: string;
+    os?: string;
+    arch?: string;
+  }) {
     const tokenHash = this.hashToken(data.token);
     return this.prisma.host.create({
       data: {

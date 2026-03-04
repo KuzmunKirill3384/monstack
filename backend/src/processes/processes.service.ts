@@ -11,15 +11,23 @@ export class ProcessesService {
     };
     if (from) where.ts = { ...where.ts, gte: from };
     if (to) where.ts = { ...where.ts, lte: to };
-    const rows = await this.prisma.procSnapshot.findMany({
+    let rows = await this.prisma.procSnapshot.findMany({
       where,
       orderBy: { ts: 'desc' },
       take: limit,
     });
+    if (rows.length === 0 && (from || to)) {
+      rows = await this.prisma.procSnapshot.findMany({
+        where: { hostId },
+        orderBy: { ts: 'desc' },
+        take: limit,
+      });
+    }
     return rows.map((r) => ({
       ts: r.ts.toISOString(),
       pid: r.pid,
       name: r.name,
+      cmd: r.cmd ?? null,
       cpu_pct: r.cpuPct,
       rss_mb: r.rssMb,
       io_read_bps: r.ioReadBps != null ? Number(r.ioReadBps) : null,

@@ -16,7 +16,10 @@ const SEED_PASSWORD = 'demo';
 const seedUser = {
   id: 'user-e2e-1',
   email: SEED_EMAIL,
-  passwordHash: crypto.createHash('sha256').update(SEED_PASSWORD + SALT).digest('hex'),
+  passwordHash: crypto
+    .createHash('sha256')
+    .update(SEED_PASSWORD + SALT)
+    .digest('hex'),
   role: 'admin',
   createdAt: new Date(),
 };
@@ -27,13 +30,17 @@ function createPrismaMock() {
     $connect: jest.fn(),
     $disconnect: jest.fn(),
     user: {
-      findUnique: jest.fn().mockImplementation((args: { where: { email?: string; id?: string } }) => {
-        const w = args?.where ?? {};
-        if (w.email === seedUser.email || w.id === seedUser.id) {
-          return Promise.resolve(seedUser);
-        }
-        return Promise.resolve(null);
-      }),
+      findUnique: jest
+        .fn()
+        .mockImplementation(
+          (args: { where: { email?: string; id?: string } }) => {
+            const w = args?.where ?? {};
+            if (w.email === seedUser.email || w.id === seedUser.id) {
+              return Promise.resolve(seedUser);
+            }
+            return Promise.resolve(null);
+          },
+        ),
     },
     host: { findMany: jest.fn().mockResolvedValue([]) },
     metricsRaw: { findMany: jest.fn().mockResolvedValue([]) },
@@ -56,7 +63,7 @@ describe('Auth (e2e)', () => {
   });
 
   beforeEach(async () => {
-    (prismaMock.user.findUnique as jest.Mock).mockImplementation(
+    prismaMock.user.findUnique.mockImplementation(
       (args: { where?: { email?: string; id?: string } }) => {
         const w = args?.where ?? {};
         if (w.email === seedUser.email || w.id === seedUser.id) {
@@ -76,7 +83,9 @@ describe('Auth (e2e)', () => {
       new FastifyAdapter(),
     );
     await app.register(fastifyCookie, { secret: 'e2e-cookie-secret' });
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
   });

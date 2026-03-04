@@ -69,7 +69,9 @@ export class AlertsCronService {
     if (rule.threshold == null) return;
     const hostIds = rule.hostId
       ? [rule.hostId]
-      : (await this.prisma.host.findMany({ select: { id: true } })).map((h) => h.id);
+      : (await this.prisma.host.findMany({ select: { id: true } })).map(
+          (h) => h.id,
+        );
 
     for (const hostId of hostIds) {
       const latest = await this.prisma.metricsRaw.findFirst({
@@ -84,7 +86,10 @@ export class AlertsCronService {
           value = latest.cpuTotalPct;
           break;
         case 'mem_used_pct':
-          value = latest.memTotalMb > 0 ? (latest.memUsedMb / latest.memTotalMb) * 100 : 0;
+          value =
+            latest.memTotalMb > 0
+              ? (latest.memUsedMb / latest.memTotalMb) * 100
+              : 0;
           break;
         case 'disk_used_pct':
           value = latest.diskUsedPct;
@@ -94,10 +99,13 @@ export class AlertsCronService {
       }
 
       const firing =
-        rule.op === '>' ? value > rule.threshold
-        : rule.op === '<' ? value < rule.threshold
-        : rule.op === '==' ? value === rule.threshold
-        : false;
+        rule.op === '>'
+          ? value > rule.threshold
+          : rule.op === '<'
+            ? value < rule.threshold
+            : rule.op === '=='
+              ? value === rule.threshold
+              : false;
 
       const existing = await this.prisma.alertEvent.findFirst({
         where: { ruleId: rule.id, hostId },

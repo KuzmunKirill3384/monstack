@@ -5,18 +5,24 @@ import { PrismaService } from '../prisma/prisma.service';
 export class MetricsService {
   constructor(private prisma: PrismaService) {}
 
+  static readonly DEFAULT_LIMIT = 5000;
+
   async findRange(
     hostId: string,
     from: Date,
     to: Date,
     resolution: 'raw' | '1m' | '5m',
+    limit = MetricsService.DEFAULT_LIMIT,
   ) {
+    void resolution; // reserved for future 1m/5m aggregates
+    const take = Math.min(Math.max(1, limit), 10000);
     const rows = await this.prisma.metricsRaw.findMany({
       where: {
         hostId,
         ts: { gte: from, lte: to },
       },
       orderBy: { ts: 'asc' },
+      take,
     });
     return rows.map((r) => ({
       ts: r.ts.toISOString(),

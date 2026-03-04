@@ -23,6 +23,7 @@ type MetricsDTO struct {
 type ProcessDTO struct {
 	PID        int     `json:"pid"`
 	Name       string  `json:"name"`
+	Cmd        string  `json:"cmd,omitempty"`
 	CPUPercent float64 `json:"cpu_pct"`
 	RSSMB      float64 `json:"rss_mb"`
 	IOReadBps  uint64  `json:"io_read_bps"`
@@ -57,6 +58,7 @@ func EncodeBatch(hostID string, sample *sampler.Sample) (*IngestBatchDTO, error)
 		dto.Processes = append(dto.Processes, ProcessDTO{
 			PID:        p.PID,
 			Name:       p.Name,
+			Cmd:        p.Cmd,
 			CPUPercent: p.CPUPercent,
 			RSSMB:      p.RSSMB,
 			IOReadBps:  p.IOReadBps,

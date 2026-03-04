@@ -98,7 +98,7 @@ async function runTui() {
       ? `${(m.load1 ?? 0).toFixed(2)} ${(m.load5 ?? 0).toFixed(2)} ${(m.load15 ?? 0).toFixed(2)}`
       : '—';
     const cpuVals = (metrics || []).map((x) => x.cpu_total_pct).filter(Boolean);
-    const spark = sparkline(cpuVals.slice(-30), 12);
+    const spark = sparkline(cpuVals.slice(-30), 20);
     const loadLine =
       loading && lastError
         ? ` Error: ${lastError}`
@@ -156,14 +156,14 @@ async function runTui() {
     }
     const sorted = sortProcs(list, sortBy, sortDesc);
     const rows = [
-      ['PID', 'NAME', 'CPU%', 'RSS', 'STATE'],
+      ['PID', 'NAME', 'CMD', 'CPU%', 'RSS', 'IO R', 'IO W', 'STATE'],
       ...sorted.map(formatProcRow),
     ];
     const emptyRows =
       rows.length <= 1
         ? [
-            ['(no processes)', '', '', '', ''],
-            ['Tip: make up-one or make up, wait 30s, press r', '', '', '', ''],
+            ['(no processes)', '', '', '', '', '', '', ''],
+            ['Tip: make up-one or make up, wait 30s, press r', '', '', '', '', '', '', ''],
           ]
         : [];
     table.setData(rows.length > 1 ? rows : [rows[0], ...emptyRows]);
@@ -310,16 +310,21 @@ async function runTui() {
       if (mode === 'hosts') {
         const to = new Date();
         const from = new Date(to.getTime() - 300000);
-        await Promise.all(
-          hosts.map(async (h) => {
-            try {
-              const data = await getMetrics(h.id, from, to);
-              h.lastMetric = data?.length ? data[data.length - 1] : null;
-            } catch {
-              h.lastMetric = null;
-            }
-          })
-        );
+        const batchSize = 8;
+        for (let i = 0; i < hosts.length; i += batchSize) {
+          const batch = hosts.slice(i, i + batchSize);
+          await Promise.all(
+            batch.map(async (h) => {
+              try {
+                const data = await getMetrics(h.id, from, to);
+                h.lastMetric = data?.length ? data[data.length - 1] : null;
+              } catch {
+                h.lastMetric = null;
+              }
+            })
+          );
+          if (controller.signal.aborted) return;
+        }
       }
 
       if (controller.signal.aborted) return;
@@ -363,6 +368,27 @@ async function runTui() {
     }
   }
 
+  async function refreshProcessesOnly() {
+    if (mode !== 'processes' || !hosts.length) return;
+    const host = hosts[hostIndex];
+    if (!host?.id) return;
+    try {
+      const to = new Date();
+      const from = new Date(to.getTime() - 60000);
+      const [metricsData, procsData] = await Promise.all([
+        getMetrics(host.id, from, to),
+        getProcesses(host.id),
+      ]);
+      metrics = metricsData;
+      processes = procsData;
+      lastError = null;
+      render();
+    } catch (e) {
+      lastError = e.message;
+      render();
+    }
+  }
+
   async function refreshAlertsOnly() {
     if (mode !== 'alerts') return;
     try {
@@ -385,7 +411,9 @@ async function runTui() {
         if (idx >= 0) {
           hostIndex = idx;
           mode = 'processes';
-          refresh();
+          if (refreshTimeoutId) clearTimeout(refreshTimeoutId);
+          scheduleRefresh();
+          refreshProcessesOnly();
         }
       }
     } else if (mode === 'rules' && alertRules.length) {
@@ -408,7 +436,13 @@ async function runTui() {
       const fk = `f${i}`;
       screen.key([k, fk], () => {
         mode = MODES[i - 1];
-        refresh();
+        if (mode === 'processes') {
+          if (refreshTimeoutId) clearTimeout(refreshTimeoutId);
+          scheduleRefresh();
+          refreshProcessesOnly();
+        } else {
+          refresh();
+        }
       });
     }
 
@@ -421,7 +455,9 @@ async function runTui() {
           if (idx >= 0) {
             hostIndex = idx;
             mode = 'processes';
-            refresh();
+            if (refreshTimeoutId) clearTimeout(refreshTimeoutId);
+            scheduleRefresh();
+            refreshProcessesOnly();
           }
         }
       }
@@ -586,11 +622,23 @@ async function runTui() {
     screen.key(['q', 'C-c', 'escape'], quit);
   };
 
-  let interval;
+  let refreshTimeoutId;
   let alertsInterval;
 
+  function scheduleRefresh() {
+    const ms =
+      mode === 'processes'
+        ? config.PROCESSES_REFRESH_MS
+        : config.REFRESH_MS;
+    refreshTimeoutId = setTimeout(() => {
+      if (mode === 'processes') refreshProcessesOnly();
+      else refresh();
+      scheduleRefresh();
+    }, ms);
+  }
+
   function quit() {
-    if (interval) clearInterval(interval);
+    if (refreshTimeoutId) clearTimeout(refreshTimeoutId);
     if (alertsInterval) clearInterval(alertsInterval);
     process.stdout.write('\nBye\n');
     process.exit(0);
@@ -599,7 +647,7 @@ async function runTui() {
   bindScreen();
   await refresh();
 
-  interval = setInterval(refresh, config.REFRESH_MS);
+  scheduleRefresh();
   alertsInterval = setInterval(refreshAlertsOnly, config.ALERTS_REFRESH_MS);
 
   process.on('SIGINT', quit);

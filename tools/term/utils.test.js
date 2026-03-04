@@ -148,40 +148,59 @@ test('formatProcRow formats process', () => {
   const row = formatProcRow({
     pid: 1234,
     name: 'node',
+    cmd: 'node server.js',
     cpu_pct: 12.5,
     rss_mb: 256,
+    io_read_bps: 1000,
+    io_write_bps: 500,
     state: 'R',
   });
   assert(row[0] === '1234', 'pid');
   assert(row[1] === 'node', 'name');
-  assert(row[2] === '12.5', 'cpu');
-  assert(row[4] === 'R', 'state');
+  assert(row[2] === 'node server.js', 'cmd');
+  assert(row[3] === '12.5', 'cpu');
+  assert(row[5] === '1.0K', 'io_read_bps');
+  assert(row[6] === '500', 'io_write_bps < 1K shows raw');
+  assert(row[7] === 'R', 'state');
 });
 
 test('formatProcRow handles nulls', () => {
   const row = formatProcRow({
     pid: 1,
     name: null,
+    cmd: null,
     cpu_pct: null,
     rss_mb: null,
+    io_read_bps: null,
+    io_write_bps: null,
     state: null,
   });
   assert(row[0] === '1', 'pid');
   assert(row[1] === '', 'null name should be empty string');
-  assert(row[2] === '0.0', 'null cpu should be 0.0');
-  assert(row[3] === '0.0', 'null rss should be 0.0');
-  assert(row[4] === '-', 'null state should be -');
+  assert(row[2] === '', 'null cmd falls back to name');
+  assert(row[3] === '0.0', 'null cpu should be 0.0');
+  assert(row[4] === '0.0', 'null rss should be 0.0');
+  assert(row[5] === '—', 'null io_read_bps should be —');
+  assert(row[6] === '—', 'null io_write_bps should be —');
+  assert(row[7] === '—', 'null state should be —');
 });
 
 test('formatProcRow truncates long name', () => {
   const longName = 'x'.repeat(100);
   const row = formatProcRow({ pid: 1, name: longName, cpu_pct: 0, rss_mb: 0, state: 'S' });
-  assert(row[1].length <= 36, `name length ${row[1].length} should be <= 36`);
+  assert(row[1].length <= 24, `name length ${row[1].length} should be <= 24`);
 });
 
 test('formatProcRow truncates long state', () => {
   const row = formatProcRow({ pid: 1, name: 'p', cpu_pct: 0, rss_mb: 0, state: 'SLEEPING' });
-  assert(row[4].length <= 4, `state length ${row[4].length} should be <= 4`);
+  assert(row[7].length <= 4, `state length ${row[7].length} should be <= 4`);
+});
+
+test('formatProcRow handles empty process object gracefully', () => {
+  const row = formatProcRow({ pid: 0 });
+  assert(row[0] === '0', 'pid');
+  assert(row[1] === '', 'empty name');
+  assert(row[2] === '', 'empty cmd');
 });
 
 async function run() {

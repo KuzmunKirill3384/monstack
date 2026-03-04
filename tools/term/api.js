@@ -95,7 +95,7 @@ export function getMetrics(hostId, from, to) {
 
 export function getProcesses(hostId, limit = config.PROCESS_LIMIT) {
   const to = new Date();
-  const from = new Date(to.getTime() - 300000);
+  const from = new Date(to.getTime() - 600000);
   const params = new URLSearchParams({
     host: hostId,
     from: from.toISOString(),

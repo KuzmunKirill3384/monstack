@@ -31,7 +31,7 @@ func Default() *Config {
 		ProcessIntervalSec: 30,
 		LogLevel:           "info",
 		DiskPaths:          []string{"/"},
-		ProcessTopN:        15,
+		ProcessTopN:        50,
 		HTTPTimeoutSec:    30,
 		HTTPRetries:        3,
 		CommandListenAddr: ":9090",
@@ -103,7 +103,7 @@ func Load(path string) (*Config, error) {
 		cfg.ProcessIntervalSec = 30
 	}
 	if cfg.ProcessTopN <= 0 {
-		cfg.ProcessTopN = 15
+		cfg.ProcessTopN = 50
 	}
 	if cfg.CommandListenAddr == "" {
 		cfg.CommandListenAddr = ":9090"

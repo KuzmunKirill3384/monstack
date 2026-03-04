@@ -49,6 +49,7 @@ describe('MetricsService', () => {
         ts: { gte: from, lte: to },
       },
       orderBy: { ts: 'asc' },
+      take: 5000,
     });
   });
 

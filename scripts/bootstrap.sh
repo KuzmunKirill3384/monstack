@@ -17,6 +17,13 @@ else
   INSTALL_DIR="${INSTALL_DIR:-$HOME/monstack}"
   echo "[bootstrap] Репозиторий не найден (запуск через curl | bash). Клонируем в $INSTALL_DIR ..."
   command -v git >/dev/null 2>&1 || { echo "[bootstrap] Нужен git: sudo apt install git"; exit 1; }
+  WRITE_CHECK_DIR="$INSTALL_DIR"
+  [[ -d "$INSTALL_DIR" ]] || WRITE_CHECK_DIR="$(dirname "$INSTALL_DIR")"
+  if ! (touch "$WRITE_CHECK_DIR/.bootstrap_write_test" 2>/dev/null && rm -f "$WRITE_CHECK_DIR/.bootstrap_write_test"); then
+    echo "[bootstrap] Ошибка: нет прав на запись в $WRITE_CHECK_DIR"
+    echo "[bootstrap] Укажите другую директорию: INSTALL_DIR=/путь/с/правами curl -fsSL ... | bash"
+    exit 1
+  fi
   if [[ -d "$INSTALL_DIR" ]] && [[ -f "$INSTALL_DIR/scripts/install.sh" ]]; then
     cd "$INSTALL_DIR" && git pull -q 2>/dev/null || true
   else
@@ -39,7 +46,7 @@ for arg in "$@"; do
     --yes|-y) YES=true ;;
     --skip-docker) SKIP_DOCKER=true ;;
     --skip-node) SKIP_NODE=true ;;
-    --skip-up) SKIP_UP=true ;;
+    --skip-up|--no-up) SKIP_UP=true ;;
     --dev) DEV=true ;;
     --tui-only) TUI_ONLY=true; SKIP_NODE=true ;;
   esac

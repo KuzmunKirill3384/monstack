@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AlertRule } from '@prisma/client';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt.guard';
@@ -66,7 +76,10 @@ export class AlertRulesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateAlertRuleDto): Promise<AlertRule> {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAlertRuleDto,
+  ): Promise<AlertRule> {
     return this.prisma.alertRule.update({
       where: { id },
       data: {

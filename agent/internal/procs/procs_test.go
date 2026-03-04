@@ -256,6 +256,56 @@ func TestTruncateName_Empty(t *testing.T) {
 	}
 }
 
+func TestReadPidStat_CommInParens(t *testing.T) {
+	tests := []struct {
+		stat       string
+		wantName   string
+		wantUtime  uint64
+		wantStime  uint64
+		wantRss    uint64
+		wantState  string
+		wantErr    bool
+	}{
+		{
+			"1234 (bash) S 1 1234 1234 0 -1 4194560 100 0 0 0 50 25 0 0 20 0 1 0 1000 500000 1024 0 0 0 0",
+			"bash", 50, 25, 1024, "S", false,
+		},
+		{
+			"5678 (my proc name) R 1 5678 5678 0 -1 4194304 200 0 0 0 1000 500 0 0 20 0 1 0 2000 600000 2048 0 0 0 0",
+			"my proc name", 1000, 500, 2048, "R", false,
+		},
+		{
+			"9999 (cmd (nested)) S 1 9999 9999 0 -1 0 0 0 0 0 100 50 0 0 20 0 1 0 3000 700000 512 0 0 0 0",
+			"cmd (nested)", 100, 50, 512, "S", false,
+		},
+		{
+			"bad",
+			"", 0, 0, 0, "", true,
+		},
+		{
+			"1 (x) S",
+			"x", 0, 0, 0, "", true,
+		},
+	}
+	for _, tt := range tests {
+		name, utime, stime, rss, state, err := parseStatString(tt.stat)
+		if tt.wantErr {
+			if err == nil {
+				t.Errorf("parseStatString(%q) wanted error", tt.stat)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("parseStatString(%q) err=%v", tt.stat, err)
+			continue
+		}
+		if name != tt.wantName || utime != tt.wantUtime || stime != tt.wantStime || rss != tt.wantRss || state != tt.wantState {
+			t.Errorf("parseStatString(%q) got name=%q utime=%d stime=%d rss=%d state=%q",
+				tt.stat, name, utime, stime, rss, state)
+		}
+	}
+}
+
 func BenchmarkTopNByCPUAndRSS(b *testing.B) {
 	var all []ProcRaw
 	prev := make(map[int]ProcRaw)

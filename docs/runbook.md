@@ -6,7 +6,7 @@
 
 ## One-shot установка (Kali / Ubuntu / Debian)
 
-- **Bootstrap (всё с нуля):** `curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash` или после клона: `./scripts/bootstrap.sh`. Флаги: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`.
+- **Bootstrap (всё с нуля):** `curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash` или после клона: `./scripts/bootstrap.sh`. Флаги: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up` (или `--no-up`).
 - **Из корня репо (Docker уже есть):** `make up-one` — одна команда: сборка CLI, генерация `.env`, запуск стека с агентом. Чтобы вызывать **`localterm`** и **`webterm`** из любой папки: один раз выполнить **`make term-global`** (или после полного `make install` они уже в PATH).
 
 **Важно:** команды `make up`, `make up-one`, `make localterm`, `make webterm` работают только из **корня репозитория**. После `make install` или `make term-global` команды **`localterm`** и **`webterm`** доступны из любой папки (через `npm link`).
@@ -56,6 +56,7 @@ sudo usermod -aG docker $USER
 2. **Интервал снимков:** агент шлёт процессы раз в **30 секунд** (`process_interval_sec`). Подождите минимум 30–60 с после запуска агента, затем обновите страницу или запрос.
 3. **Агент в Docker:** в `docker-compose` у сервиса `agent` указано `pid: host` — контейнер видит процессы **хоста**. Если агент запущен на хосте (не в Docker), он и так видит все процессы.
 4. **Проверка API:** `curl -s "http://localhost:3000/processes?host=<host_id>&limit=10"` — подставьте реальный `host_id` из списка хостов. Пустой массив при работающем агенте — проверить логи агента: `docker compose --profile agent logs -f agent`.
+5. **Ingest / gzip:** агент отправляет данные на `POST /v1/ingest` с gzip-телом. При 400 (Bad Request) проверьте логи backend: `docker compose logs backend`. Частые причины: невалидный JSON после распаковки gzip, несовпадение host_id с токеном, ошибка парсинга ts. При 401 — неверный Bearer token (host_token в агенте не совпадает с token в БД).
 
 ---
 

@@ -33,9 +33,17 @@ describe('IngestService', () => {
         {
           provide: PrismaService,
           useValue: {
-            $transaction: jest.fn().mockResolvedValue(undefined),
+            $transaction: jest.fn().mockImplementation((fn) => {
+              const tx = {
+                metricsRaw: { create: jest.fn().mockResolvedValue({}) },
+                procSnapshot: {
+                  createMany: jest.fn().mockResolvedValue({ count: 0 }),
+                },
+              };
+              return typeof fn === 'function' ? fn(tx) : Promise.resolve();
+            }),
             metricsRaw: { create: jest.fn() },
-            procSnapshot: { create: jest.fn() },
+            procSnapshot: { create: jest.fn(), createMany: jest.fn() },
           },
         },
         {

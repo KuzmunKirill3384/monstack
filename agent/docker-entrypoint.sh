@@ -23,4 +23,8 @@ http_retries: 3
 command_listen_addr: ":9090"
 command_secret: "$AGENT_COMMAND_SECRET"
 EOF
-exec monagent -config /tmp/config.yaml
+if [ "$AGENT_DEBUG" = "1" ] || [ "$AGENT_DEBUG" = "true" ] || [ "$AGENT_DEBUG" = "yes" ]; then
+  exec monagent -config /tmp/config.yaml -debug
+else
+  exec monagent -config /tmp/config.yaml
+fi

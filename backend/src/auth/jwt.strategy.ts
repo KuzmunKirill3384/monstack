@@ -5,7 +5,10 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const COOKIE_NAME = 'access_token';
 
-function jwtFromRequest(req: { headers?: { authorization?: string }; cookies?: { [key: string]: string } }) {
+function jwtFromRequest(req: {
+  headers?: { authorization?: string };
+  cookies?: { [key: string]: string };
+}) {
   const cookie = req.cookies?.[COOKIE_NAME];
   if (cookie) return cookie;
   return ExtractJwt.fromAuthHeaderAsBearerToken()(req);

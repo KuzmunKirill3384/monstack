@@ -18,12 +18,12 @@ export class ProcessSignalService {
     }
     const agentUrl = host.agentUrl ?? undefined;
     if (!agentUrl) {
-      throw new BadRequestException(
-        'Agent URL not configured for this host',
-      );
+      throw new BadRequestException('Agent URL not configured for this host');
     }
     const normalized = signal.toUpperCase();
-    if (!ALLOWED_SIGNALS.includes(normalized as (typeof ALLOWED_SIGNALS)[number])) {
+    if (
+      !ALLOWED_SIGNALS.includes(normalized as (typeof ALLOWED_SIGNALS)[number])
+    ) {
       throw new BadRequestException(
         `Invalid signal. Allowed: ${ALLOWED_SIGNALS.join(', ')}`,
       );

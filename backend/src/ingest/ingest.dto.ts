@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class IngestMetricsDto {
@@ -71,6 +78,11 @@ export class IngestProcessDto {
   @IsOptional()
   @IsString()
   state?: string;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  cmd?: string;
 }
 
 export class IngestBatchDto {
@@ -90,6 +102,7 @@ export class IngestBatchDto {
   @ApiProperty({ type: [IngestProcessDto], required: false })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(200)
   @ValidateNested({ each: true })
   @Type(() => IngestProcessDto)
   processes?: IngestProcessDto[];

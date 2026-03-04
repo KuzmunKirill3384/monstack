@@ -57,6 +57,7 @@ export interface ProcSnapshot {
   ts: string;
   pid: number;
   name: string;
+  cmd: string | null;
   cpu_pct: number;
   rss_mb: number;
   io_read_bps: number | null;

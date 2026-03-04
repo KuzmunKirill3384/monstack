@@ -69,6 +69,27 @@ test('getProcesses builds URL with host, from, to, limit', async () => {
   assert(u.searchParams.get('from') !== null && u.searchParams.get('to') !== null, 'from/to');
 });
 
+test('getProcesses returns processes data from API', async () => {
+  const mockProcs = [
+    { pid: 1, name: 'init', cpu_pct: 0, rss_mb: 1, state: 'S' },
+    { pid: 2, name: 'node', cpu_pct: 5, rss_mb: 50, io_read_bps: 1000, io_write_bps: 500, state: 'R' },
+  ];
+  const origFetch = global.fetch;
+  global.fetch = () => Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve(mockProcs),
+  });
+  try {
+    const result = await getProcesses('host-1', 10);
+    assert(Array.isArray(result), 'returns array');
+    assert(result.length === 2, 'length 2');
+    assert(result[0].pid === 1 && result[0].name === 'init', 'first process');
+    assert(result[1].io_read_bps === 1000 && result[1].io_write_bps === 500, 'second has IO');
+  } finally {
+    global.fetch = origFetch;
+  }
+});
+
 test('apiGet throws on 401', async () => {
   const orig = global.fetch;
   global.fetch = () => Promise.resolve({

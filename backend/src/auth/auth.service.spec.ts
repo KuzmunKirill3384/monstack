@@ -9,7 +9,10 @@ describe('AuthService', () => {
   let prisma: PrismaService;
 
   const salt = 'test-salt';
-  const passwordHash = crypto.createHash('sha256').update('pass' + salt).digest('hex');
+  const passwordHash = crypto
+    .createHash('sha256')
+    .update('pass' + salt)
+    .digest('hex');
   const mockUser = {
     id: 'u1',
     email: 'u@test.com',
@@ -72,14 +75,16 @@ describe('AuthService', () => {
     const token = service.signToken(mockUser);
     expect(typeof token).toBe('string');
     expect(token.split('.')).toHaveLength(3);
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    const payload = JSON.parse(
+      Buffer.from(token.split('.')[1], 'base64').toString(),
+    );
     expect(payload.sub).toBe('u1');
     expect(payload.email).toBe('u@test.com');
     expect(payload.role).toBe('user');
   });
 
-  it('login returns access_token', async () => {
-    const result = await service.login(mockUser);
+  it('login returns access_token', () => {
+    const result = service.login(mockUser);
     expect(result).toEqual({ access_token: expect.any(String) });
   });
 });

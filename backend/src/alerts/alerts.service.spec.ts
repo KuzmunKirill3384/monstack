@@ -78,14 +78,19 @@ describe('AlertsService', () => {
     (prisma.alertEvent.findMany as jest.Mock).mockResolvedValue([mockEvent]);
     const result = await service.findEvents();
     expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ status: 'firing', rule: { metric: 'cpu_total_pct' } });
+    expect(result[0]).toMatchObject({
+      status: 'firing',
+      rule: { metric: 'cpu_total_pct' },
+    });
   });
 
   it('findRules returns all when no hostId', async () => {
     (prisma.alertRule.findMany as jest.Mock).mockResolvedValue([mockRule]);
     const result = await service.findRules();
     expect(result).toHaveLength(1);
-    expect(prisma.alertRule.findMany).toHaveBeenCalledWith({ where: undefined });
+    expect(prisma.alertRule.findMany).toHaveBeenCalledWith({
+      where: undefined,
+    });
   });
 
   it('findRules filters by hostId or null', async () => {

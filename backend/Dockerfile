@@ -18,5 +18,6 @@ COPY --from=builder /app/prisma ./prisma
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max-old-space-size=192
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]

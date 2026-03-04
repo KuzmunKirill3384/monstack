@@ -46,7 +46,9 @@ func New(baseURL, token string, timeoutSec, retries int, insecureSkipVerify bool
 		}
 	}
 	tr := &http.Transport{
-		TLSClientConfig: tlsConfig,
+		TLSClientConfig:     tlsConfig,
+		MaxIdleConnsPerHost: 2,
+		MaxConnsPerHost:     2,
 	}
 	return &Client{
 		baseURL: baseURL,

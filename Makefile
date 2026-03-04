@@ -7,7 +7,7 @@
 
 .PHONY: install install-all install-backend install-web install-term install-term-c install-console link term-global \
         up down logs term term-c localterm webterm check check-deps term-check test clean help diagrams bootstrap \
-        cli-build cli-install up-one
+        cli-build cli-install up-one install-docker-only
 
 SHELL := /bin/bash
 COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
@@ -40,6 +40,7 @@ help:
 	@echo "  make clean       — удалить node_modules и сборки"
 	@echo "  make diagrams    — сгенерировать PNG из docs/diagrams/*.puml (Docker)"
 	@echo "  make up-one      — одна команда: собрать CLI + поднять стек с агентом"
+	@echo "  make install-docker-only — поднять только Docker (без Go, для пользователей без Go)"
 	@echo "  make cli-build   — собрать monstack-cli (Go)"
 	@echo ""
 	@echo "Клавиши TUI: 1-5|F1-F5 экраны  Enter выбор  s сортировка  f фильтр  r обновить  q выход"
@@ -93,6 +94,10 @@ up:
 	@$(COMPOSE) up -d --build
 	@echo "Backend: http://localhost:3000  Web: http://localhost:3001"
 
+install-docker-only:
+	@echo "Минимальный путь (без Go): только docker compose up."
+	@$(MAKE) up
+
 down:
 	@$(COMPOSE) down
 
@@ -139,6 +144,7 @@ clean:
 	@echo "clean OK"
 
 cli-build:
+	@command -v go >/dev/null 2>&1 || (echo "Go не установлен. Для запуска стека без Go используйте: make up  или  make install-docker-only"; exit 1)
 	@mkdir -p bin && cd monstack-cli && go build -o ../bin/monstack-cli . && echo "Built ./bin/monstack-cli"
 
 # Одна команда: собрать CLI (если нет), сгенерировать .env при необходимости, поднять стек с агентом

@@ -1,4 +1,10 @@
-import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt.guard';
 import { ProcessesService } from './processes.service';
@@ -40,7 +46,9 @@ export class ProcessesController {
     }
     const lim = limit !== undefined && limit !== '' ? parseInt(limit, 10) : 500;
     if (Number.isNaN(lim) || lim < 1 || lim > MAX_LIMIT) {
-      throw new BadRequestException(`"limit" must be between 1 and ${MAX_LIMIT}`);
+      throw new BadRequestException(
+        `"limit" must be between 1 and ${MAX_LIMIT}`,
+      );
     }
     return this.processes.findRange(hostId, fromDate, toDate, lim);
   }

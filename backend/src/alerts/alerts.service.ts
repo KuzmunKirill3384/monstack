@@ -6,7 +6,11 @@ export class AlertsService {
   constructor(private prisma: PrismaService) {}
 
   async findEvents(hostId?: string, from?: Date, to?: Date, status?: string) {
-    const where: { hostId?: string; ts?: { gte?: Date; lte?: Date }; status?: string } = {};
+    const where: {
+      hostId?: string;
+      ts?: { gte?: Date; lte?: Date };
+      status?: string;
+    } = {};
     if (hostId) where.hostId = hostId;
     if (from || to) {
       where.ts = {};

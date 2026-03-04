@@ -6,11 +6,11 @@ import { api, type ProcSnapshot } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-const REFRESH_MS = 2000;
+const REFRESH_MS = 1000;
 const PROCESS_LIMIT = 300;
 const SIGNALS = ['SIGTERM', 'SIGKILL'] as const;
 
-type SortKey = 'pid' | 'name' | 'cpu_pct' | 'rss_mb' | 'state';
+type SortKey = 'pid' | 'name' | 'cmd' | 'cpu_pct' | 'rss_mb' | 'io_read_bps' | 'io_write_bps' | 'state';
 
 export function ProcessTable({ hostId }: { hostId: string }) {
   const queryClient = useQueryClient();
@@ -39,6 +39,7 @@ export function ProcessTable({ hostId }: { hostId: string }) {
       (p) =>
         String(p.pid).includes(f) ||
         (p.name || '').toLowerCase().includes(f) ||
+        (p.cmd || '').toLowerCase().includes(f) ||
         (p.state || '').toLowerCase().includes(f)
     );
   }, [processes, filter]);
@@ -47,13 +48,15 @@ export function ProcessTable({ hostId }: { hostId: string }) {
     return [...filtered].sort((a, b) => {
       let va: string | number = a[sortBy] ?? '';
       let vb: string | number = b[sortBy] ?? '';
-      if (sortBy === 'name' || sortBy === 'state') {
+      if (sortBy === 'name' || sortBy === 'cmd' || sortBy === 'state') {
         va = String(va).toLowerCase();
         vb = String(vb).toLowerCase();
         const c = va < vb ? -1 : va > vb ? 1 : 0;
         return sortDesc ? -c : c;
       }
-      const c = (va as number) - (vb as number);
+      const numA = typeof va === 'number' ? va : va == null ? 0 : Number(va) || 0;
+      const numB = typeof vb === 'number' ? vb : vb == null ? 0 : Number(vb) || 0;
+      const c = numA - numB;
       return sortDesc ? -c : c;
     });
   }, [filtered, sortBy, sortDesc]);
@@ -62,7 +65,7 @@ export function ProcessTable({ hostId }: { hostId: string }) {
     if (sortBy === key) setSortDesc((d) => !d);
     else {
       setSortBy(key);
-      setSortDesc(key === 'name' || key === 'state' ? false : true);
+      setSortDesc(key === 'name' || key === 'cmd' || key === 'state' ? false : true);
     }
   };
 
@@ -81,6 +84,9 @@ export function ProcessTable({ hostId }: { hostId: string }) {
       setSending(false);
     }
   };
+
+  const formatIo = (v: number | null) =>
+    v == null ? '—' : v >= 1e9 ? `${(v / 1e9).toFixed(1)}G` : v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(1)}K` : String(v);
 
   const th = (key: SortKey, label: string, align: 'left' | 'right' = 'left') => (
     <th
@@ -112,8 +118,11 @@ export function ProcessTable({ hostId }: { hostId: string }) {
             <tr>
               {th('pid', 'PID', 'right')}
               {th('name', 'NAME', 'left')}
+              {th('cmd', 'COMMAND', 'left')}
               {th('cpu_pct', 'CPU%', 'right')}
               {th('rss_mb', 'RSS (MB)', 'right')}
+              {th('io_read_bps', 'IO R', 'right')}
+              {th('io_write_bps', 'IO W', 'right')}
               {th('state', 'STATE', 'left')}
               <th className="border-b bg-muted/50 px-2 py-1.5 text-right text-xs font-medium">Actions</th>
             </tr>
@@ -121,14 +130,14 @@ export function ProcessTable({ hostId }: { hostId: string }) {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                <td colSpan={9} className="p-4 text-center text-muted-foreground">
                   Loading…
                 </td>
               </tr>
             )}
             {!isLoading && sorted.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                <td colSpan={9} className="p-4 text-center text-muted-foreground">
                   No process data. Agent sends processes every ~30s.
                 </td>
               </tr>
@@ -141,11 +150,16 @@ export function ProcessTable({ hostId }: { hostId: string }) {
                 >
                   <td className="w-16 px-2 py-1 text-right tabular-nums">{p.pid}</td>
                   <td className="max-w-[280px] truncate px-2 py-1" title={p.name || ''}>
-                    {p.name || '-'}
+                    {p.name || '—'}
+                  </td>
+                  <td className="max-w-[240px] truncate px-2 py-1" title={p.cmd || ''}>
+                    {p.cmd || '—'}
                   </td>
                   <td className="w-16 px-2 py-1 text-right tabular-nums">{p.cpu_pct.toFixed(1)}</td>
                   <td className="w-20 px-2 py-1 text-right tabular-nums">{p.rss_mb.toFixed(1)}</td>
-                  <td className="w-16 px-2 py-1">{p.state ?? '-'}</td>
+                  <td className="w-14 px-2 py-1 text-right tabular-nums">{formatIo(p.io_read_bps)}</td>
+                  <td className="w-14 px-2 py-1 text-right tabular-nums">{formatIo(p.io_write_bps)}</td>
+                  <td className="w-16 px-2 py-1">{p.state ?? '—'}</td>
                   <td className="w-28 px-2 py-1 text-right">
                     {confirmKill?.pid === p.pid ? (
                       <span className="flex items-center justify-end gap-1">

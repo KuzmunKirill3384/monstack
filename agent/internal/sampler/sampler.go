@@ -99,9 +99,10 @@ func (s *Sampler) Sample(ctx context.Context) (*Sample, error) {
 	if s.shouldSampleProcs(now) {
 		procsList, s.prevProcs, err = procs.TopN(s.prevProcs, float64(s.cfg.ProcessIntervalSec), s.cfg.ProcessTopN)
 		if err != nil {
-			s.logger.Debug("procs sample failed", zap.Error(err))
+			s.logger.Warn("procs sample failed", zap.Error(err))
 		} else {
 			s.lastProcAt = now
+			s.logger.Debug("procs sampled", zap.Int("count", len(procsList)))
 		}
 	}
 

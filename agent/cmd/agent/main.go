@@ -17,6 +17,7 @@ import (
 
 func main() {
 	configPath := flag.String("config", "/etc/monagent/config.yaml", "path to config file")
+	debug := flag.Bool("debug", false, "enable debug logging (reading /proc, parsed process count)")
 	flag.Parse()
 
 	cfg, err := config.Load(*configPath)
@@ -26,7 +27,9 @@ func main() {
 	}
 
 	var level zapcore.Level
-	if err := level.UnmarshalText([]byte(cfg.LogLevel)); err != nil {
+	if *debug {
+		level = zapcore.DebugLevel
+	} else if err := level.UnmarshalText([]byte(cfg.LogLevel)); err != nil {
 		level = zapcore.InfoLevel
 	}
 	zapCfg := zap.NewProductionConfig()

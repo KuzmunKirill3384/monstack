@@ -19,8 +19,8 @@ export class IngestService {
       throw new BadRequestException('Invalid ts');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.metricsRaw.create({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.metricsRaw.create({
         data: {
           ts,
           hostId,
@@ -34,25 +34,25 @@ export class IngestService {
           netRxBps: BigInt(dto.metrics.net_rx_bps),
           netTxBps: BigInt(dto.metrics.net_tx_bps),
         },
-      }),
-      ...(dto.processes?.length
-        ? dto.processes.map((p) =>
-            this.prisma.procSnapshot.create({
-              data: {
-                hostId,
-                ts,
-                pid: p.pid,
-                name: p.name,
-                cpuPct: p.cpu_pct,
-                rssMb: p.rss_mb,
-                ioReadBps: p.io_read_bps != null ? BigInt(p.io_read_bps) : null,
-                ioWriteBps: p.io_write_bps != null ? BigInt(p.io_write_bps) : null,
-                state: p.state ?? null,
-              },
-            }),
-          )
-        : []),
-    ]);
+      });
+      if (dto.processes?.length) {
+        await tx.procSnapshot.createMany({
+          data: dto.processes.map((p) => ({
+            hostId,
+            ts,
+            pid: p.pid,
+            name: p.name,
+            cmd: p.cmd ?? null,
+            cpuPct: p.cpu_pct,
+            rssMb: p.rss_mb,
+            ioReadBps: p.io_read_bps != null ? BigInt(p.io_read_bps) : null,
+            ioWriteBps:
+              p.io_write_bps != null ? BigInt(p.io_write_bps) : null,
+            state: p.state ?? null,
+          })),
+        });
+      }
+    });
 
     await this.hosts.updateLastSeen(hostId);
   }

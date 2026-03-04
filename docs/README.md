@@ -12,6 +12,8 @@
 curl -fsSL https://raw.githubusercontent.com/KuzmunKirill3384/monstack/main/scripts/bootstrap.sh | bash
 ```
 
+Для обхода кэша CDN/браузера: `curl -H "Cache-Control: no-cache" -fsSL ... | bash`.
+
 При установке через curl репозиторий клонируется в `$HOME/monstack` (можно изменить через `INSTALL_DIR=/путь/куда/клонировать`).
 
 Или: `git clone ... && cd monstack && ./scripts/bootstrap.sh`. Флаги: `--yes`, `--skip-docker`, `--skip-node`, `--skip-up`.

@@ -30,7 +30,7 @@ export class AuthService {
     });
   }
 
-  async login(user: User) {
+  login(user: User) {
     return {
       access_token: this.signToken(user),
     };

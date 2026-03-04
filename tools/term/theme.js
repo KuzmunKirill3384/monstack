@@ -24,7 +24,7 @@ const light = {
     header: { fg: 'blue', bold: true },
     cell: { fg: 'black' },
     selected: { bg: 'cyan', fg: 'black' },
-    border: { fg: 'gray' },
+    border: { fg: 'black' },
   },
   prompt: { border: { fg: 'blue' } },
   error: { fg: 'red', bold: true },

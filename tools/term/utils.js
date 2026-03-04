@@ -1,4 +1,14 @@
-export const SORT_KEYS = ['cpu_pct', 'rss_mb', 'name', 'pid'];
+export const SORT_KEYS = ['cpu_pct', 'rss_mb', 'io_read_bps', 'io_write_bps', 'name', 'cmd', 'pid'];
+
+function formatIo(v) {
+  if (v == null || v === undefined) return '—';
+  const n = Number(v);
+  if (Number.isNaN(n)) return '—';
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}G`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return String(n);
+}
 
 export function sortProcs(procs, sortBy, desc) {
   const key = sortBy || 'cpu_pct';
@@ -16,13 +26,17 @@ export function sortProcs(procs, sortBy, desc) {
 }
 
 export function formatProcRow(p) {
-  const name = (p.name || '').slice(0, 36);
+  const name = (p.name || '').slice(0, 24);
+  const cmd = (p.cmd || p.name || '').slice(0, 32);
   return [
     String(p.pid),
     name,
+    cmd,
     (p.cpu_pct ?? 0).toFixed(1),
     (p.rss_mb ?? 0).toFixed(1),
-    (p.state || '-').slice(0, 4),
+    formatIo(p.io_read_bps),
+    formatIo(p.io_write_bps),
+    (p.state || '—').slice(0, 4),
   ];
 }
 

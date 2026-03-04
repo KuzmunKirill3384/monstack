@@ -50,7 +50,7 @@ export class AuthController {
   }
 
   @Post('logout')
-  async logout(@Res({ passthrough: true }) res: FastifyReply) {
+  logout(@Res({ passthrough: true }) res: FastifyReply) {
     res.setCookie(COOKIE_NAME, '', {
       httpOnly: true,
       sameSite: 'lax',

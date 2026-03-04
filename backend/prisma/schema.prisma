@@ -46,6 +46,7 @@ model MetricsRaw {
   netTxBps     BigInt   @map("net_tx_bps")
   host         Host     @relation(fields: [hostId], references: [id], onDelete: Cascade)
   @@index([hostId, ts])
+  @@index([ts])
   @@map("metrics_raw")
 }
 
@@ -55,6 +56,7 @@ model ProcSnapshot {
   ts          DateTime
   pid         Int
   name        String
+  cmd         String?  @map("cmd")
   cpuPct      Float    @map("cpu_pct")
   rssMb       Float    @map("rss_mb")
   ioReadBps   BigInt?  @map("io_read_bps")

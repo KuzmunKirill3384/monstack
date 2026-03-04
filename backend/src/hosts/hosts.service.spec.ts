@@ -88,8 +88,15 @@ describe('HostsService', () => {
 
   it('findAll filters by onlineOnly', async () => {
     const recentHost = { ...mockHost, lastSeenAt: new Date() };
-    const oldHost = { ...mockHost, id: 'h2', lastSeenAt: new Date(Date.now() - 60000) };
-    (prisma.host.findMany as jest.Mock).mockResolvedValue([recentHost, oldHost]);
+    const oldHost = {
+      ...mockHost,
+      id: 'h2',
+      lastSeenAt: new Date(Date.now() - 60000),
+    };
+    (prisma.host.findMany as jest.Mock).mockResolvedValue([
+      recentHost,
+      oldHost,
+    ]);
     (prisma.metricsRaw.findMany as jest.Mock).mockResolvedValue([mockMetric]);
     const online = await service.findAll(true);
     const offline = await service.findAll(false);
@@ -106,7 +113,11 @@ describe('HostsService', () => {
   it('findOne returns host with online flag', async () => {
     (prisma.host.findUnique as jest.Mock).mockResolvedValue(mockHost);
     const result = await service.findOne('host-1');
-    expect(result).toMatchObject({ id: 'host-1', name: 'test-host', online: true });
+    expect(result).toMatchObject({
+      id: 'host-1',
+      name: 'test-host',
+      online: true,
+    });
   });
 
   it('updateLastSeen calls prisma.update', async () => {

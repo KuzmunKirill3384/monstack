@@ -6,6 +6,20 @@
 
 ## Установка (одна команда)
 
+### Минимальный путь (Docker + Node)
+
+Для запуска **без Go** — только Docker и Node.js:
+
+| Шаг | Команда |
+|-----|---------|
+| 1 | `git clone ... && cd monstack` |
+| 2 | `make install-docker-only` (или `make up`) |
+| 3 | `make localterm` / `make webterm` (нужен Node.js) |
+
+Веб: http://localhost:3001 · API: http://localhost:3000
+
+### Полный путь (с Go CLI)
+
 Нужны: **Docker** (и docker compose), **Go**. Из корня репо:
 
 ```bash
@@ -17,6 +31,10 @@ make up-one
 **`make up-one`** собирает CLI, при отсутствии `.env` создаёт его, поднимает весь стек (postgres, backend, web, agent). Дальше: http://localhost:3001 или из корня репо `make localterm` / `make webterm`.
 
 Чтобы команды **`localterm`** и **`webterm`** были в PATH из любой папки: один раз **`make term-global`** (нужен Node.js). Подробнее: [monstack-cli/README.md](monstack-cli/README.md).
+
+### Устранение проблем
+
+При типичных сбоях (пустой список хостов, нет процессов, алерты не срабатывают, 401, Docker) см. [docs/runbook.md](docs/runbook.md).
 
 ---
 
@@ -110,6 +128,7 @@ make webterm     # или  npm run webterm     — Docker + открыть бр�
 | **`make localterm`** / **`npm run localterm`** | Терминальный TUI (хосты, процессы, метрики, алерты). Backend и агент: `make up` или `make up-one`. |
 | **`make webterm`** / **`npm run webterm`** | Поднять Docker, через 3 с открыть в браузере http://localhost:3001. |
 | **`make up`** | Запустить весь стек в Docker (postgres, backend, web, agent). |
+| **`make install-docker-only`** | Только docker compose up (без Go; для пользователей без Go). |
 | **`make down`** | Остановить контейнеры. |
 | **`make term`** | Запустить Node TUI (5 экранов, клавиши 1–5 / F1–F5). |
 | **`make term-check`** | Smoke-тест TUI (проверка выхода при недоступном backend). |
