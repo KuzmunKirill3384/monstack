@@ -44,7 +44,9 @@ echo ">> backend"
 
 echo ""
 echo ">> web"
-(cd web && npm install)
+# Ограничение памяти для npm install — снижает риск OOM (Killed) на системах с малым RAM.
+# Переопределить: export NODE_OPTIONS=--max-old-space-size=4096 перед make install
+(cd web && NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1536}" npm install)
 
 echo ""
 echo ">> tools/term (терминальный TUI)"
