@@ -67,6 +67,12 @@ sudo usermod -aG docker $USER
 
 ---
 
+## Ошибка 429 (rate limit) в TUI или вебе
+
+Rate limit применяется **только к POST /v1/ingest** (приём данных от агента). Запросы GET /hosts, /metrics, /processes, /alerts **не** лимитируются — TUI и веб могут опрашивать API без 429. Если 429 всё же появляется на других запросах: задать `INGEST_RATE_LIMIT_DISABLED=1` в .env или увеличить `INGEST_RATE_LIMIT_MAX` (по умолчанию 120/мин на ingest).
+
+---
+
 ## Веб не открывается / 401 на запросах
 
 1. **AUTH_ENABLED:** при `AUTH_ENABLED=true` нужна авторизация. Открыть `/login`, войти (demo@test.com / demo после seed).

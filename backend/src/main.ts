@@ -37,14 +37,20 @@ async function bootstrap() {
     rateLimitMax > 0 &&
     rateLimitWindowMs > 0
   ) {
-    await app.register(fastifyRateLimit, {
-      max: rateLimitMax,
-      timeWindow: rateLimitWindowMs,
-      keyGenerator: (request) => {
-        const auth = request.headers.authorization;
-        return auth ?? request.ip ?? 'anonymous';
+    const fastify = app.getHttpAdapter().getInstance();
+    await fastify.register(
+      async (scope) => {
+        await scope.register(fastifyRateLimit, {
+          max: rateLimitMax,
+          timeWindow: rateLimitWindowMs,
+          keyGenerator: (request) => {
+            const auth = request.headers.authorization;
+            return auth ?? request.ip ?? 'anonymous';
+          },
+        });
       },
-    });
+      { prefix: '/v1' },
+    );
   }
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true }),
