@@ -219,6 +219,20 @@ fi
 
 echo ""
 echo "[bootstrap] Зависимости..."
+# Повторная проверка: при curl|bash ROOT мог быть неверным (нет репо)
+if [[ ! -f "$ROOT/scripts/install.sh" ]]; then
+  echo "[bootstrap] Репозиторий не найден. Клонируем в ./monstack ..."
+  REPO_URL="https://github.com/KuzmunKirill3384/monstack.git"
+  command -v git >/dev/null 2>&1 || { echo "[bootstrap] Установите git: sudo apt install git"; exit 1; }
+  if [[ -d "monstack" ]] && [[ -f "monstack/scripts/install.sh" ]]; then
+    cd monstack && ROOT="$(pwd)"
+  elif [[ -d "monstack" ]]; then
+    cd monstack && git pull -q 2>/dev/null || true && ROOT="$(pwd)"
+  else
+    git clone "$REPO_URL" monstack && cd monstack && ROOT="$(pwd)"
+  fi
+  cd "$ROOT"
+fi
 if $TUI_ONLY; then
   bash "$ROOT/scripts/install.sh" --tui-only
 else
